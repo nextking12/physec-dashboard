@@ -1,3 +1,11 @@
 spring:
   application:
     name: physical-security-dashboard
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
