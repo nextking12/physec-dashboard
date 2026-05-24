@@ -32,6 +32,10 @@ public class DeviceService {
 		device.setType(request.type());
 		device.setLocation(request.location());
 		device.setStatus(request.status());
+        device.setManufacturer(request.manufacturer());
+        device.setMacAddress(request.macAddress());
+        device.setIpAddress(request.ipAddress());
+        device.setModel(request.model());
 
 		return DeviceResponse.from(deviceRepository.save(device));
 	}
@@ -50,6 +54,11 @@ public class DeviceService {
         device.setType(request.type());
         device.setLocation(request.location());
         device.setStatus(request.status());
+        device.setManufacturer(request.manufacturer());
+        device.setMacAddress(request.macAddress());
+        device.setIpAddress(request.ipAddress());
+        device.setModel(request.model());
+
         return DeviceResponse.from(deviceRepository.save(device));
     }
     public void delete(Long id) {

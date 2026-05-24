@@ -12,7 +12,11 @@ public record DeviceResponse(
 		DeviceType type,
 		String location,
 		DeviceStatus status,
-		Instant createdAt
+		Instant createdAt,
+        String model,
+        String macAddress,
+        String ipAddress,
+        String manufacturer
 ) {
 
 	public static DeviceResponse from(Device device) {
@@ -22,7 +26,11 @@ public record DeviceResponse(
 				device.getType(),
 				device.getLocation(),
 				device.getStatus(),
-				device.getCreatedAt()
+				device.getCreatedAt(),
+                device.getModel(),
+                device.getMacAddress(),
+                device.getIpAddress(),
+                device.getManufacturer()
 		);
 	}
 }

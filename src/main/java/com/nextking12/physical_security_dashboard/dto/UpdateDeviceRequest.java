@@ -7,8 +7,12 @@ import jakarta.validation.constraints.NotNull;
 
 public record UpdateDeviceRequest(
         @NotBlank String name,
-        @NotNull DeviceType type,//@NotNull for objects. Enums are objects which is referenced
+        @NotNull DeviceType type,
         @NotBlank String location,
-        @NotNull DeviceStatus status
+        @NotNull DeviceStatus status,
+        String model,
+        String macAddress,
+        String ipAddress,
+        String manufacturer
 ) {
 }

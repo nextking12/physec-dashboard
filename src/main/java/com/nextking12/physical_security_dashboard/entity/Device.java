@@ -29,4 +29,13 @@ public class Device {
     private DeviceStatus status;
 
 	private Instant createdAt = Instant.now();
+
+    private String model;
+
+    private String macAddress;
+
+    private String ipAddress;
+
+    private String manufacturer;
+
 }
