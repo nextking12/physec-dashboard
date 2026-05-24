@@ -1,15 +1,17 @@
 package com.nextking12.physical_security_dashboard.dto;
 
 import com.nextking12.physical_security_dashboard.entity.Device;
+import com.nextking12.physical_security_dashboard.entity.DeviceStatus;
+import com.nextking12.physical_security_dashboard.entity.DeviceType;
 
 import java.time.Instant;
 
 public record DeviceResponse(
 		Long id,
 		String name,
-		String type,
+		DeviceType type,
 		String location,
-		String status,
+		DeviceStatus status,
 		Instant createdAt
 ) {
 
