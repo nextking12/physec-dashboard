@@ -26,6 +26,12 @@ Content-Type: application/json
 
 ## Run Locally
 
+Create your local environment file:
+
+```bash
+cp .env.example .env
+```
+
 Start PostgreSQL:
 
 ```bash
@@ -35,7 +41,7 @@ docker compose up -d
 Start the app:
 
 ```bash
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Pdev
 ```
 
 OpenAPI docs are available at:
