@@ -2,15 +2,11 @@ package com.nextking12.physical_security_dashboard.controller;
 
 import com.nextking12.physical_security_dashboard.dto.CreateDeviceRequest;
 import com.nextking12.physical_security_dashboard.dto.DeviceResponse;
+import com.nextking12.physical_security_dashboard.dto.UpdateDeviceRequest;
 import com.nextking12.physical_security_dashboard.service.DeviceService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -34,4 +30,19 @@ public class DeviceController {
 	public DeviceResponse createDevice(@Valid @RequestBody CreateDeviceRequest request) {
 		return deviceService.create(request);
 	}
+
+    @GetMapping("/{id}")
+    public DeviceResponse getDevice(@PathVariable Long id) {
+        return deviceService.findById(id);
+    }
+    @PutMapping("/{id}")
+    public DeviceResponse updateDevice(@PathVariable Long id,
+                                       @Valid @RequestBody UpdateDeviceRequest request) {
+        return deviceService.update(id, request);
+    }
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteDevice(@PathVariable Long id) {
+        deviceService.delete(id);
+    }
 }
