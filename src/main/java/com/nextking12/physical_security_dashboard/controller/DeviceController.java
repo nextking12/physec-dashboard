@@ -3,6 +3,8 @@ package com.nextking12.physical_security_dashboard.controller;
 import com.nextking12.physical_security_dashboard.dto.CreateDeviceRequest;
 import com.nextking12.physical_security_dashboard.dto.DeviceResponse;
 import com.nextking12.physical_security_dashboard.dto.UpdateDeviceRequest;
+import com.nextking12.physical_security_dashboard.entity.DeviceStatus;
+import com.nextking12.physical_security_dashboard.entity.DeviceType;
 import com.nextking12.physical_security_dashboard.service.DeviceService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -20,10 +22,14 @@ public class DeviceController {
 		this.deviceService = deviceService;
 	}
 
-	@GetMapping
-	public List<DeviceResponse> getAllDevices() {
-		return deviceService.findAll();
-	}
+    @GetMapping
+    public List<DeviceResponse> getAllDevices(
+            @RequestParam(required = false) DeviceStatus status,
+            @RequestParam(required = false) DeviceType type,
+            @RequestParam(required = false) String location
+    ) {
+        return deviceService.findAll(status, type, location);
+    }
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)

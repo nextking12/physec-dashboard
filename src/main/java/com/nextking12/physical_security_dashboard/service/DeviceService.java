@@ -4,12 +4,16 @@ import com.nextking12.physical_security_dashboard.dto.CreateDeviceRequest;
 import com.nextking12.physical_security_dashboard.dto.DeviceResponse;
 import com.nextking12.physical_security_dashboard.dto.UpdateDeviceRequest;
 import com.nextking12.physical_security_dashboard.entity.Device;
+import com.nextking12.physical_security_dashboard.entity.DeviceStatus;
+import com.nextking12.physical_security_dashboard.entity.DeviceType;
 import com.nextking12.physical_security_dashboard.exception.ResourceNotFoundException;
 import com.nextking12.physical_security_dashboard.repository.DeviceRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
-
+import jakarta.persistence.criteria.Predicate;
 @Service
 public class DeviceService {
 
@@ -19,12 +23,33 @@ public class DeviceService {
 		this.deviceRepository = deviceRepository;
 	}
 
-	public List<DeviceResponse> findAll() {
-		return deviceRepository.findAll()
-				.stream()
-				.map(DeviceResponse::from)
-				.toList();
-	}
+    public List<DeviceResponse> findAll(DeviceStatus status, DeviceType type, String location) {
+        Specification<Device> spec = (root, query, criteriaBuilder) -> {
+            List<   Predicate> predicates = new ArrayList<>();
+
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
+            }
+
+            if (type != null) {
+                predicates.add(criteriaBuilder.equal(root.get("type"), type));
+            }
+
+            if (location != null && !location.isBlank()) {
+                predicates.add(criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("location")),
+                        "%" + location.toLowerCase() + "%"
+                ));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return deviceRepository.findAll(spec)
+                .stream()
+                .map(DeviceResponse::from)
+                .toList();
+    }
 
 	public DeviceResponse create(CreateDeviceRequest request) {
 		Device device = new Device();
