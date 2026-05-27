@@ -1,8 +1,8 @@
-# Physical Security Dashboard API
+# Physical Security Dashboard
 
-A Spring Boot backend for a physical security operations dashboard. The current version manages security devices such as cameras, card readers, alarm panels, and motion sensors.
+A full-stack physical security operations dashboard. The current version manages security devices such as cameras, card readers, alarm panels, and motion sensors.
 
-This project is built as a portfolio-ready backend API with PostgreSQL persistence, Docker-based local setup, Swagger documentation, basic API security, validation, filtering, and integration tests.
+This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQL persistence, Docker-based local setup, Basic Auth, Swagger documentation, integration tests, and a React dashboard frontend.
 
 ## Tech Stack
 
@@ -16,6 +16,8 @@ This project is built as a portfolio-ready backend API with PostgreSQL persisten
 - Swagger / OpenAPI
 - Testcontainers
 - Maven
+- React
+- Vite
 
 ## Features
 
@@ -28,6 +30,7 @@ This project is built as a portfolio-ready backend API with PostgreSQL persisten
 - Expose Swagger only in the local dev profile
 - Expose only the Actuator health endpoint
 - Run integration tests against PostgreSQL with Testcontainers
+- Use a React dashboard for login, device metrics, filtering, and device management
 
 ## Requirements
 
@@ -75,6 +78,31 @@ The API runs at:
 ```text
 http://localhost:8080
 ```
+
+## Frontend
+
+Install frontend dependencies:
+
+```bash
+cd frontend
+npm install
+```
+
+Start the frontend dev server:
+
+```bash
+npm run dev
+```
+
+The frontend runs at:
+
+```text
+http://localhost:5173
+```
+
+The Vite dev server proxies `/api` and `/actuator` requests to the Spring Boot backend at `http://localhost:8080`.
+
+Use the same `APP_USERNAME` and `APP_PASSWORD` values from your `.env` file to sign in.
 
 ## Swagger
 
@@ -200,7 +228,7 @@ The integration tests use Testcontainers, so Docker must be running.
 
 ## Roadmap
 
-- Build a frontend dashboard
+- Polish the frontend dashboard
 - Add dashboard summary metrics
 - Add security event tracking
 - Add alert severity filtering
