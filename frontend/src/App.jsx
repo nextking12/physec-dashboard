@@ -63,6 +63,8 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginError, setLoginError] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [devices, setDevices] = useState([]);
   const [filters, setFilters] = useState({ status: "", type: "", location: "" });
   const [isLoading, setIsLoading] = useState(false);
@@ -84,12 +86,12 @@ export default function App() {
     }));
   }, [devices]);
 
-  async function apiRequest(path, options = {}) {
+  async function apiRequest(path, options = {}, authOverride = authHeader) {
     const response = await fetch(path, {
       ...options,
       headers: {
         "Content-Type": "application/json",
-        ...(authHeader ? { Authorization: authHeader } : {}),
+        ...(authOverride ? { Authorization: authOverride } : {}),
         ...(options.headers || {})
       }
     });
@@ -139,15 +141,30 @@ export default function App() {
     loadDevices();
   }, [credentials, filters.status, filters.type]);
 
-  function handleLogin(event) {
+  async function handleLogin(event) {
     event.preventDefault();
     const nextCredentials = {
       username: loginForm.username.trim(),
       password: loginForm.password
     };
-    sessionStorage.setItem("psd.credentials", JSON.stringify(nextCredentials));
-    setCredentials(nextCredentials);
-    setLoginForm({ username: "", password: "" });
+
+    setIsLoggingIn(true);
+    setLoginError("");
+
+    try {
+      await apiRequest(
+        "/api/devices",
+        {},
+        `Basic ${encodeBasicAuth(nextCredentials.username, nextCredentials.password)}`
+      );
+      sessionStorage.setItem("psd.credentials", JSON.stringify(nextCredentials));
+      setCredentials(nextCredentials);
+      setLoginForm({ username: "", password: "" });
+    } catch (err) {
+      setLoginError(err.message);
+    } finally {
+      setIsLoggingIn(false);
+    }
   }
 
   function logout() {
@@ -228,6 +245,12 @@ export default function App() {
           <p>Sign in with the Basic Auth credentials from your local backend environment.</p>
 
           <form onSubmit={handleLogin} className="login-form">
+            {loginError && (
+              <div className="error-banner compact">
+                <AlertTriangle size={18} />
+                {loginError}
+              </div>
+            )}
             <label>
               Username
               <input
@@ -246,9 +269,9 @@ export default function App() {
                 required
               />
             </label>
-            <button type="submit" className="primary-button">
+            <button type="submit" className="primary-button" disabled={isLoggingIn}>
               <Shield size={18} />
-              Sign In
+              {isLoggingIn ? "Checking..." : "Sign In"}
             </button>
           </form>
         </section>
