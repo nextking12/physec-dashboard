@@ -18,6 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -30,6 +31,9 @@ class PhysicalSecurityDashboardApplicationTests {
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
+
+    private static final String TEST_USERNAME = "test-user";
+    private static final String TEST_PASSWORD = "test-password";
 
     @Autowired
     MockMvc mockMvc;
@@ -46,6 +50,8 @@ class PhysicalSecurityDashboardApplicationTests {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("spring.security.user.name", () -> TEST_USERNAME);
+        registry.add("spring.security.user.password", () -> TEST_PASSWORD);
     }
 
     @BeforeEach
@@ -61,7 +67,8 @@ class PhysicalSecurityDashboardApplicationTests {
         createDevice("East Wing Alarm Panel", "ALARM_PANEL", "East Wing", "MAINTENANCE");
 
         mockMvc.perform(get("/api/devices")
-                        .param("status", "ONLINE"))
+                        .param("status", "ONLINE")
+                        .with(httpBasic(TEST_USERNAME, TEST_PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].name", containsInAnyOrder(
                         "Front Entrance Camera",
@@ -69,12 +76,14 @@ class PhysicalSecurityDashboardApplicationTests {
                 )));
 
         mockMvc.perform(get("/api/devices")
-                        .param("type", "CARD_READER"))
+                        .param("type", "CARD_READER")
+                        .with(httpBasic(TEST_USERNAME, TEST_PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Rear Door Reader"));
 
         mockMvc.perform(get("/api/devices")
-                        .param("location", "lobby"))
+                        .param("location", "lobby")
+                        .with(httpBasic(TEST_USERNAME, TEST_PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].name", containsInAnyOrder(
                         "Front Entrance Camera",
@@ -85,8 +94,21 @@ class PhysicalSecurityDashboardApplicationTests {
     @Test
     void rejectsInvalidEnumFilter() throws Exception {
         mockMvc.perform(get("/api/devices")
-                        .param("status", "banana"))
+                        .param("status", "banana")
+                        .with(httpBasic(TEST_USERNAME, TEST_PASSWORD)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void requiresAuthenticationForDeviceApi() throws Exception {
+        mockMvc.perform(get("/api/devices"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void allowsHealthCheckWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk());
     }
 
     private void createDevice(String name, String type, String location, String status) throws Exception {
@@ -103,7 +125,8 @@ class PhysicalSecurityDashboardApplicationTests {
 
         mockMvc.perform(post("/api/devices")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(httpBasic(TEST_USERNAME, TEST_PASSWORD)))
                 .andExpect(status().isCreated());
     }
 }
