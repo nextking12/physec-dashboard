@@ -47,6 +47,7 @@ Your `.env` should include:
 
 ```env
 POSTGRES_DB=physical_security_dashboard
+POSTGRES_HOST=localhost
 POSTGRES_USER=myuser
 POSTGRES_PASSWORD=secret
 POSTGRES_PORT=5432
@@ -188,7 +189,9 @@ The integration tests use Testcontainers, so Docker must be running.
 ## Deployment Notes
 
 - Do not run production with the `dev` profile.
-- Set `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`, `APP_USERNAME`, and `APP_PASSWORD` in the deployment environment.
+- Set `APP_USERNAME` and `APP_PASSWORD` in the deployment environment.
+- Set database variables in the deployment environment. The app accepts either this project's `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` names, or Railway-style `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` names.
+- If your host provides a `PORT` variable, the app will use it automatically.
 - Use HTTPS in production because Basic Auth sends credentials with each request.
 - Swagger and OpenAPI docs are disabled by default outside the dev profile.
 - Hibernate schema updates are dev-only; a future production version should use a migration tool such as Flyway or Liquibase.
