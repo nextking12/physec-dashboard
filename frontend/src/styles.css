@@ -1,17 +1,21 @@
 :root {
-  color-scheme: light;
-  --bg: #f4f6f8;
-  --surface: #ffffff;
-  --surface-soft: #f9fafb;
-  --text: #17212b;
-  --muted: #637083;
-  --line: #d7dee8;
-  --accent: #0f766e;
-  --accent-strong: #115e59;
-  --danger: #b42318;
-  --warning: #b7791f;
-  --blue: #2563eb;
-  --shadow: 0 18px 45px rgba(15, 23, 42, 0.11);
+  color-scheme: dark;
+  --bg: #0f1216;
+  --surface: #171c22;
+  --surface-soft: #1d242c;
+  --surface-raised: #222a33;
+  --text: #f3f6f8;
+  --muted: #9aa7b5;
+  --line: #303945;
+  --accent: #2dd4bf;
+  --accent-strong: #14b8a6;
+  --accent-muted: rgba(45, 212, 191, 0.13);
+  --danger: #f87171;
+  --danger-muted: rgba(248, 113, 113, 0.14);
+  --warning: #fbbf24;
+  --warning-muted: rgba(251, 191, 36, 0.14);
+  --blue: #60a5fa;
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
 }
 
 * {
@@ -21,7 +25,9 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at top left, rgba(45, 212, 191, 0.08), transparent 34rem),
+    linear-gradient(180deg, #10151b 0%, var(--bg) 22rem);
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -42,17 +48,18 @@ button {
   place-items: center;
   padding: 24px;
   background:
-    linear-gradient(rgba(16, 42, 67, 0.72), rgba(16, 42, 67, 0.72)),
+    linear-gradient(rgba(6, 10, 15, 0.78), rgba(6, 10, 15, 0.86)),
     url("https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=1800&q=80") center/cover;
 }
 
 .login-panel {
   width: min(440px, 100%);
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: rgba(23, 28, 34, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
   padding: 30px;
   box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
 }
 
 .brand-mark {
@@ -61,7 +68,7 @@ button {
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #e8f5f2;
+  background: var(--accent-muted);
   color: var(--accent);
 }
 
@@ -90,7 +97,7 @@ button {
 label {
   display: grid;
   gap: 7px;
-  color: #334155;
+  color: #cbd5e1;
   font-size: 0.9rem;
   font-weight: 700;
 }
@@ -101,16 +108,20 @@ select {
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: white;
+  background: #11161c;
   color: var(--text);
   padding: 9px 11px;
   outline: none;
 }
 
+input::placeholder {
+  color: #788697;
+}
+
 input:focus,
 select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.16);
 }
 
 .app-shell {
@@ -164,7 +175,7 @@ select:focus {
 
 .primary-button {
   background: var(--accent);
-  color: white;
+  color: #06110f;
   padding: 0 15px;
 }
 
@@ -173,16 +184,16 @@ select:focus {
 }
 
 .secondary-button {
-  background: white;
-  color: #253244;
+  background: var(--surface-soft);
+  color: var(--text);
   border-color: var(--line);
   padding: 0 14px;
 }
 
 .icon-button {
   width: 40px;
-  background: white;
-  color: #253244;
+  background: var(--surface-soft);
+  color: var(--text);
   border-color: var(--line);
 }
 
@@ -194,9 +205,9 @@ select:focus {
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid #fecaca;
-  background: #fff1f2;
-  color: #9f1239;
+  border: 1px solid rgba(248, 113, 113, 0.38);
+  background: var(--danger-muted);
+  color: #fecaca;
   border-radius: 8px;
   padding: 12px 14px;
   margin-bottom: 16px;
@@ -221,7 +232,7 @@ select:focus {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 .metric-card {
@@ -249,22 +260,22 @@ select:focus {
   place-items: center;
   border-radius: 8px;
   color: var(--accent);
-  background: #e8f5f2;
+  background: var(--accent-muted);
 }
 
 .metric-icon.offline {
-  color: #475569;
-  background: #eef2f7;
+  color: #a8b3c2;
+  background: rgba(148, 163, 184, 0.14);
 }
 
 .metric-icon.maintenance {
   color: var(--warning);
-  background: #fff7e6;
+  background: var(--warning-muted);
 }
 
 .metric-icon.alerting {
   color: var(--danger);
-  background: #fff1f2;
+  background: var(--danger-muted);
 }
 
 .toolbar {
@@ -281,7 +292,7 @@ select:focus {
   align-items: center;
   gap: 8px;
   min-height: 42px;
-  color: #253244;
+  color: var(--text);
   font-weight: 900;
 }
 
@@ -355,22 +366,22 @@ select:focus {
   padding: 0 10px;
   font-weight: 900;
   font-size: 0.82rem;
-  background: #e8f5f2;
+  background: var(--accent-muted);
   color: var(--accent);
 }
 
 .status-pill.offline {
-  background: #eef2f7;
-  color: #475569;
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
 }
 
 .status-pill.maintenance {
-  background: #fff7e6;
+  background: var(--warning-muted);
   color: var(--warning);
 }
 
 .status-pill.alerting {
-  background: #fff1f2;
+  background: var(--danger-muted);
   color: var(--danger);
 }
 
@@ -386,7 +397,7 @@ select:focus {
   inset: 0;
   display: flex;
   justify-content: flex-end;
-  background: rgba(15, 23, 42, 0.28);
+  background: rgba(3, 7, 12, 0.62);
   padding: 18px;
   z-index: 20;
 }
