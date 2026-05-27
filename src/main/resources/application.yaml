@@ -2,8 +2,6 @@ spring:
   application:
     name: physical-security-dashboard
   jpa:
-    hibernate:
-      ddl-auto: update
     open-in-view: false
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT}/${POSTGRES_DB}
