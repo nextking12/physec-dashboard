@@ -62,11 +62,13 @@ Start PostgreSQL:
 docker compose up -d
 ```
 
-Start the application with the dev profile:
+Start the application with the dev profile and your local `.env` values:
 
 ```bash
-./mvnw spring-boot:run -Pdev
+set -a; source .env; set +a; ./mvnw spring-boot:run -Pdev
 ```
+
+If you run only `./mvnw spring-boot:run -Pdev`, the app will use the fallback dev credentials from `application-dev.yaml`.
 
 The API runs at:
 
