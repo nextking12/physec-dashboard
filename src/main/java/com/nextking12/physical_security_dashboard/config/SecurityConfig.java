@@ -2,7 +2,7 @@ package com.nextking12.physical_security_dashboard.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -19,7 +19,9 @@ public class SecurityConfig {
 						.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
 						.anyRequest().authenticated())
-				.httpBasic(Customizer.withDefaults())
+				.httpBasic(basic -> basic
+						.authenticationEntryPoint((request, response, authException) ->
+								response.setStatus(HttpStatus.UNAUTHORIZED.value())))
 				.build();
 	}
 }
