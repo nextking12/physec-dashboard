@@ -57,6 +57,7 @@ POSTGRES_PORT=5432
 
 APP_USERNAME=admin
 APP_PASSWORD=dev-password
+APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
 Start PostgreSQL:
@@ -86,6 +87,18 @@ Install frontend dependencies:
 ```bash
 cd frontend
 npm install
+```
+
+Create the optional frontend environment file:
+
+```bash
+cp .env.example .env
+```
+
+For local development, leave `VITE_API_BASE_URL` blank so Vite can proxy API requests to the backend:
+
+```env
+VITE_API_BASE_URL=
 ```
 
 Start the frontend dev server:
@@ -220,8 +233,10 @@ The integration tests use Testcontainers, so Docker must be running.
 
 - Do not run production with the `dev` profile.
 - Set `APP_USERNAME` and `APP_PASSWORD` in the deployment environment.
+- Set `APP_CORS_ALLOWED_ORIGINS` to the deployed frontend URL, for example `https://your-frontend-app.vercel.app`.
 - Set database variables in the deployment environment. The app accepts either this project's `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` names, or Railway-style `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` names.
 - If your host provides a `PORT` variable, the app will use it automatically.
+- Set frontend `VITE_API_BASE_URL` to the deployed backend URL, for example `https://your-backend-api.railway.app`.
 - Use HTTPS in production because Basic Auth sends credentials with each request.
 - Swagger and OpenAPI docs are disabled by default outside the dev profile.
 - Hibernate schema updates are dev-only; a future production version should use a migration tool such as Flyway or Liquibase.

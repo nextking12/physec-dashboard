@@ -19,6 +19,7 @@ import {
 
 const DEVICE_TYPES = ["CAMERA", "CARD_READER", "ALARM_PANEL", "MOTION_SENSOR"];
 const DEVICE_STATUSES = ["ONLINE", "OFFLINE", "MAINTENANCE", "ALERTING"];
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 const EMPTY_FORM = {
   name: "",
@@ -47,6 +48,10 @@ const typeLabels = {
 
 function encodeBasicAuth(username, password) {
   return btoa(`${username}:${password}`);
+}
+
+function apiUrl(path) {
+  return `${API_BASE_URL}${path}`;
 }
 
 function toTitle(value) {
@@ -87,7 +92,7 @@ export default function App() {
   }, [devices]);
 
   async function apiRequest(path, options = {}, authOverride = authHeader) {
-    const response = await fetch(path, {
+    const response = await fetch(apiUrl(path), {
       ...options,
       headers: {
         "Content-Type": "application/json",
