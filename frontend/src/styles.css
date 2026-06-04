@@ -48,28 +48,51 @@ button {
   place-items: center;
   padding: 24px;
   background:
-    linear-gradient(rgba(6, 10, 15, 0.78), rgba(6, 10, 15, 0.86)),
-    url("https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=1800&q=80") center/cover;
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    #050505;
+  background-size: 44px 44px;
 }
 
 .login-panel {
   width: min(440px, 100%);
-  background: rgba(23, 28, 34, 0.96);
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: #ffffff;
+  color: #050505;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 30px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(16px);
+  padding: 32px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+}
+
+.login-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 34px;
+}
+
+.login-header span {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  color: #52525b;
+  background: #fafafa;
+  padding: 0 11px;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .brand-mark {
-  width: 54px;
-  height: 54px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: var(--accent-muted);
-  color: var(--accent);
+  background: #050505;
+  color: #ffffff;
 }
 
 .login-panel h1,
@@ -80,12 +103,40 @@ button {
 }
 
 .login-panel h1 {
-  margin-top: 22px;
-  font-size: 1.8rem;
+  font-size: 2rem;
+  letter-spacing: 0;
 }
 
 .login-panel p {
-  color: var(--muted);
+  margin: 10px 0 24px;
+  color: #71717a;
+}
+
+.login-panel label {
+  color: #18181b;
+}
+
+.login-panel input {
+  border-color: #d4d4d8;
+  background: #ffffff;
+  color: #050505;
+}
+
+.login-panel input:focus {
+  border-color: #050505;
+  box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.12);
+}
+
+.login-panel .primary-button {
+  width: 100%;
+  background: #050505;
+  color: #ffffff;
+  border-color: #050505;
+}
+
+.login-panel .primary-button:hover {
+  background: #27272a;
+  border-color: #27272a;
 }
 
 .login-form,

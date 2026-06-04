@@ -243,11 +243,14 @@ export default function App() {
     return (
       <main className="login-shell">
         <section className="login-panel">
-          <div className="brand-mark">
-            <Shield size={30} />
+          <div className="login-header">
+            <div className="brand-mark">
+              <Shield size={24} />
+            </div>
+            <span>Security Operations</span>
           </div>
-          <h1>Physical Security Dashboard</h1>
-          <p>Sign in with the Basic Auth credentials from your local backend environment.</p>
+          <h1>Welcome back</h1>
+          <p>Sign in to continue to the Physical Security Dashboard.</p>
 
           <form onSubmit={handleLogin} className="login-form">
             {loginError && (
