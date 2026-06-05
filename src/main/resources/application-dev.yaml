@@ -3,9 +3,6 @@ spring:
     user:
       name: ${APP_USERNAME:admin}
       password: ${APP_PASSWORD:dev-password}
-  jpa:
-    hibernate:
-      ddl-auto: update
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:physical_security_dashboard}
     username: ${POSTGRES_USER:myuser}

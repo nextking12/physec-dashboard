@@ -229,17 +229,41 @@ Run the test suite:
 
 The integration tests use Testcontainers, so Docker must be running.
 
-## Deployment Notes
+## Deployment
 
-- Do not run production with the `dev` profile.
-- Set `APP_USERNAME` and `APP_PASSWORD` in the deployment environment.
-- Set `APP_CORS_ALLOWED_ORIGINS` to the deployed frontend URL, for example `https://your-frontend-app.vercel.app`.
-- Set database variables in the deployment environment. The app accepts either this project's `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` names, or Railway-style `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` names.
-- If your host provides a `PORT` variable, the app will use it automatically.
-- Set frontend `VITE_API_BASE_URL` to the deployed backend URL, for example `https://your-backend-api.railway.app`.
-- Use HTTPS in production because Basic Auth sends credentials with each request.
-- Swagger and OpenAPI docs are disabled by default outside the dev profile.
-- Hibernate schema updates are dev-only; a future production version should use a migration tool such as Flyway or Liquibase.
+The backend targets Railway and the frontend targets Vercel. Both use the same GitHub repository but are configured as two separate services.
+
+### Backend on Railway
+
+1. Create a new Railway project from this repository. Railway auto-detects the `Dockerfile` at the repo root and uses the `railway.json` healthcheck (`/actuator/health`).
+2. Add a Postgres plugin to the project. Railway exposes `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD`, which the app already understands via the fallback in `application.yaml`.
+3. In the backend service's **Variables** tab, set:
+   - `SPRING_PROFILES_ACTIVE=prod`
+   - `APP_USERNAME=<your-username>`
+   - `APP_PASSWORD=<your-password>`
+   - `APP_CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>.vercel.app`
+4. Deploy. The first boot runs Flyway migrations and creates the `devices` table automatically.
+5. After the first deploy succeeds, note the public URL (for example `https://physical-security-dashboard.up.railway.app`) and use it in the frontend step.
+
+### Frontend on Vercel
+
+1. Import the same repository into Vercel.
+2. Set the project root to `frontend/` (Vercel auto-detects Vite).
+3. Add the environment variable:
+   - `VITE_API_BASE_URL=https://<your-railway-domain>.up.railway.app`
+4. Deploy. The `vercel.json` rewrite sends all routes to `index.html` so the SPA handles navigation.
+
+### Local cleanup before deploying
+
+- Rotate any password you used in your local `.env`. Do not reuse it in production.
+- The default `admin` / `dev-password` credentials in `application.yaml` are only fallbacks; production must set `APP_USERNAME` and `APP_PASSWORD` or the deployed app will start with weak defaults.
+
+### Production notes
+
+- HTTPS is required because Basic Auth sends credentials with every request. Both Railway and Vercel provide TLS by default.
+- Swagger and OpenAPI are disabled outside the `dev` profile.
+- Database schema is managed by Flyway (`src/main/resources/db/migration`). Never set `spring.jpa.hibernate.ddl-auto` to `update` or `create` in production; the `prod` profile pins it to `validate`.
+- The `dev` profile no longer relies on `ddl-auto: update` either; the Flyway migration is the single source of truth for the schema in every environment.
 
 ## Roadmap
 

@@ -1,0 +1,17 @@
+target/
+.mvn/wrapper/maven-wrapper.jar
+.git/
+.gitignore
+.gitattributes
+.idea/
+*.iml
+*.iws
+*.ipr
+.env
+.env.*
+!.env.example
+frontend/
+README.md
+HELP.md
+compose.yaml
+.DS_Store
