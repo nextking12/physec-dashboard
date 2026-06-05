@@ -255,7 +255,8 @@ The backend targets Railway and the frontend targets Vercel. Both use the same G
 
 ### Local cleanup before deploying
 
-- Rotate any password you used in your local `.env`. Do not reuse it in production.
+- The `.env` file is gitignored and stays on your laptop. Railway does not read it. You do not need to rotate your local development password.
+- The real rule: pick a **different, strong** password for `APP_PASSWORD` in Railway than the one you use in `.env`. Reusing passwords across local dev and production is a common leak vector.
 - The default `admin` / `dev-password` credentials in `application.yaml` are only fallbacks; production must set `APP_USERNAME` and `APP_PASSWORD` or the deployed app will start with weak defaults.
 
 ### Production notes
