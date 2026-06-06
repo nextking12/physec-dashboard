@@ -49,7 +49,7 @@ class PhysicalSecurityDashboardApplicationTests {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("spring.security.user.name", () -> TEST_USERNAME);
         registry.add("spring.security.user.password", () -> TEST_PASSWORD);
     }
