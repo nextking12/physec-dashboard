@@ -48,10 +48,10 @@ button {
   place-items: center;
   padding: 24px;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at top left, rgba(45, 212, 191, 0.24), transparent 28rem),
+    radial-gradient(circle at bottom right, rgba(20, 184, 166, 0.18), transparent 30rem),
+    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.08), transparent 18rem),
     #050505;
-  background-size: 44px 44px;
 }
 
 .login-panel {
@@ -307,11 +307,21 @@ select:focus {
 .type-icon {
   width: 36px;
   height: 36px;
+  flex: 0 0 36px;
   display: grid;
   place-items: center;
   border-radius: 8px;
   color: var(--accent);
   background: var(--accent-muted);
+  line-height: 0;
+}
+
+.metric-icon svg,
+.type-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.2;
 }
 
 .metric-icon.offline {
@@ -327,6 +337,21 @@ select:focus {
 .metric-icon.alerting {
   color: var(--danger);
   background: var(--danger-muted);
+}
+
+.type-icon.card-reader {
+  color: var(--blue);
+  background: rgba(96, 165, 250, 0.14);
+}
+
+.type-icon.alarm-panel {
+  color: var(--warning);
+  background: var(--warning-muted);
+}
+
+.type-icon.motion-sensor {
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.14);
 }
 
 .toolbar {
@@ -394,6 +419,7 @@ select:focus {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 260px;
 }
 
 .name-cell strong,

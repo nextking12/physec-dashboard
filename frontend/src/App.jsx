@@ -4,7 +4,7 @@ import {
   AlertTriangle,
   Camera,
   CheckCircle2,
-  DoorOpen,
+  CreditCard,
   Edit3,
   Filter,
   LogOut,
@@ -546,9 +546,10 @@ function MetricCard({ icon, label, value, status }) {
 function typeIcon(type) {
   const icons = {
     CAMERA: <Camera size={18} />,
-    CARD_READER: <DoorOpen size={18} />,
+    CARD_READER: <CreditCard size={18} />,
     ALARM_PANEL: <Shield size={18} />,
     MOTION_SENSOR: <Radar size={18} />
   };
-  return <span className="type-icon">{icons[type] || <Shield size={18} />}</span>;
+  const typeClass = type ? type.toLowerCase().replaceAll("_", "-") : "";
+  return <span className={`type-icon ${typeClass}`}>{icons[type] || <Shield size={18} />}</span>;
 }
