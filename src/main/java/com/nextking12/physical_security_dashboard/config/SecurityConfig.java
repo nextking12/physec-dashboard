@@ -10,6 +10,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -28,6 +31,16 @@ public class SecurityConfig {
 
 	@Value("${spring.security.user.password}")
 	private String password;
+
+	@Bean
+	UserDetailsService userDetailsService() {
+		return new InMemoryUserDetailsManager(
+				User.withUsername(username)
+						.password("{noop}" + password)
+						.roles("USER")
+						.build()
+		);
+	}
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
