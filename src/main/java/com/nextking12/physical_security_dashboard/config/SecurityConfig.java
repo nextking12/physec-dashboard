@@ -18,7 +18,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 
 @Configuration
@@ -53,8 +55,10 @@ public class SecurityConfig {
 						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
 						.anyRequest().authenticated())
 				.httpBasic(basic -> basic
-						.authenticationEntryPoint((request, response, authException) ->
-								response.setStatus(HttpStatus.UNAUTHORIZED.value())))
+						.authenticationEntryPoint((request, response, authException) -> {
+							logFailedBasicAuthAttempt(request.getHeader("Authorization"));
+							response.setStatus(HttpStatus.UNAUTHORIZED.value());
+						}))
 				.build();
 	}
 
@@ -79,5 +83,28 @@ public class SecurityConfig {
 	@EventListener(ApplicationReadyEvent.class)
 	void logConfiguredSecurityUser() {
 		logger.info("Configured Basic Auth user '{}' with password length {}", username, password.length());
+	}
+
+	private void logFailedBasicAuthAttempt(String authorizationHeader) {
+		if (authorizationHeader == null || !authorizationHeader.startsWith("Basic ")) {
+			logger.info("Rejected Basic Auth request without Basic Authorization header");
+			return;
+		}
+
+		try {
+			String encodedCredentials = authorizationHeader.substring("Basic ".length());
+			String credentials = new String(Base64.getDecoder().decode(encodedCredentials), StandardCharsets.UTF_8);
+			int separator = credentials.indexOf(':');
+			if (separator < 0) {
+				logger.info("Rejected Basic Auth request with malformed credentials");
+				return;
+			}
+
+			String attemptedUsername = credentials.substring(0, separator);
+			String attemptedPassword = credentials.substring(separator + 1);
+			logger.info("Rejected Basic Auth user '{}' with password length {}", attemptedUsername, attemptedPassword.length());
+		} catch (IllegalArgumentException exception) {
+			logger.info("Rejected Basic Auth request with invalid Base64 credentials");
+		}
 	}
 }
