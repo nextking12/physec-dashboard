@@ -1,8 +1,12 @@
 package com.nextking12.physical_security_dashboard.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -16,6 +20,14 @@ import java.util.List;
 
 @Configuration
 public class SecurityConfig {
+
+	private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
+	@Value("${spring.security.user.name}")
+	private String username;
+
+	@Value("${spring.security.user.password}")
+	private String password;
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -49,5 +61,10 @@ public class SecurityConfig {
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/api/**", configuration);
 		return source;
+	}
+
+	@EventListener(ApplicationReadyEvent.class)
+	void logConfiguredSecurityUser() {
+		logger.info("Configured Basic Auth user '{}' with password length {}", username, password.length());
 	}
 }
