@@ -2,7 +2,7 @@
 
 A full-stack physical security operations dashboard. The current version manages security devices such as cameras, card readers, alarm panels, and motion sensors.
 
-This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQL persistence, Docker-based local setup, Basic Auth, Swagger documentation, integration tests, and a React dashboard frontend.
+This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQL persistence, Flyway migrations, Basic Auth, integration tests, and a React dashboard frontend.
 
 ## Tech Stack
 
@@ -13,7 +13,7 @@ This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQ
 - Spring Security
 - PostgreSQL
 - Docker Compose
-- Swagger / OpenAPI
+- Swagger / OpenAPI for local development
 - Testcontainers
 - Maven
 - React
@@ -28,7 +28,8 @@ This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQ
 - Use enums for controlled device types and statuses
 - Protect API endpoints with HTTP Basic authentication
 - Expose Swagger only in the local dev profile
-- Expose only the Actuator health endpoint
+- Manage database schema with Flyway migrations
+- Expose only the Actuator health endpoint in production
 - Run integration tests against PostgreSQL with Testcontainers
 - Use a React dashboard for login, device metrics, filtering, and device management
 
@@ -46,17 +47,17 @@ Create your local environment file:
 cp .env.example .env
 ```
 
-Your `.env` should include:
+Your `.env` should include local-only values. These are examples, not production credentials:
 
 ```env
 POSTGRES_DB=physical_security_dashboard
 POSTGRES_HOST=localhost
-POSTGRES_USER=myuser
-POSTGRES_PASSWORD=secret
+POSTGRES_USER=local_user
+POSTGRES_PASSWORD=change-me-local-postgres-password
 POSTGRES_PORT=5432
 
-APP_USERNAME=admin
-APP_PASSWORD=dev-password
+APP_USERNAME=local_admin
+APP_PASSWORD=change-me-local-app-password
 APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
@@ -71,8 +72,6 @@ Start the application with the dev profile and your local `.env` values:
 ```bash
 set -a; source .env; set +a; ./mvnw spring-boot:run -Pdev
 ```
-
-If you run only `./mvnw spring-boot:run -Pdev`, the app will use the fallback dev credentials from `application-dev.yaml`.
 
 The API runs at:
 
@@ -115,7 +114,7 @@ http://localhost:5173
 
 The Vite dev server proxies `/api` and `/actuator` requests to the Spring Boot backend at `http://localhost:8080`.
 
-Use the same `APP_USERNAME` and `APP_PASSWORD` values from your `.env` file to sign in.
+Use the same `APP_USERNAME` and `APP_PASSWORD` values from your local `.env` file to sign in.
 
 ## Swagger
 
@@ -125,12 +124,7 @@ Swagger is enabled only when running with the `dev` profile:
 http://localhost:8080/swagger-ui.html
 ```
 
-Click `Authorize` in Swagger and use the values from your `.env`:
-
-```text
-username: admin
-password: dev-password
-```
+Click `Authorize` in Swagger and use the `APP_USERNAME` and `APP_PASSWORD` values from your local `.env`.
 
 ## API Overview
 
@@ -231,40 +225,54 @@ The integration tests use Testcontainers, so Docker must be running.
 
 ## Deployment
 
-The backend targets Railway and the frontend targets Vercel. Both use the same GitHub repository but are configured as two separate services.
+The deployed app uses Railway for the Spring Boot API and PostgreSQL database, and Vercel for the React frontend. Both deployments can use the same GitHub repository.
 
 ### Backend on Railway
 
-1. Create a new Railway project from this repository. Railway auto-detects the `Dockerfile` at the repo root and uses the `railway.json` healthcheck (`/actuator/health`).
-2. Add a Postgres plugin to the project. Railway exposes `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD`, which the app already understands via the fallback in `application.yaml`.
-3. In the backend service's **Variables** tab, set:
+1. Create a Railway project from this repository.
+2. Deploy the backend service from the repo root. `railway.json` tells Railway to use the root `Dockerfile` and healthcheck `/actuator/health`.
+3. Add a Railway PostgreSQL database to the same project.
+4. In the backend service's **Variables** tab, set:
    - `SPRING_PROFILES_ACTIVE=prod`
    - `APP_USERNAME=<your-username>`
-   - `APP_PASSWORD=<your-password>`
-   - `APP_CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>.vercel.app`
-4. Deploy. The first boot runs Flyway migrations and creates the `devices` table automatically.
-5. After the first deploy succeeds, note the public URL (for example `https://physical-security-dashboard.up.railway.app`) and use it in the frontend step.
+   - `APP_PASSWORD=<strong-password>`
+   - `PGHOST=${{ Postgres.PGHOST }}`
+   - `PGPORT=${{ Postgres.PGPORT }}`
+   - `PGDATABASE=${{ Postgres.PGDATABASE }}`
+   - `PGUSER=${{ Postgres.PGUSER }}`
+   - `PGPASSWORD=${{ Postgres.PGPASSWORD }}`
+5. Deploy the backend and generate a public Railway domain.
+6. Verify the backend:
+
+```bash
+curl https://<your-railway-domain>/actuator/health
+curl -u <your-username>:<strong-password> https://<your-railway-domain>/api/devices
+```
+
+The first boot runs Flyway migrations and creates the `devices` table automatically.
 
 ### Frontend on Vercel
 
 1. Import the same repository into Vercel.
 2. Set the project root to `frontend/` (Vercel auto-detects Vite).
 3. Add the environment variable:
-   - `VITE_API_BASE_URL=https://<your-railway-domain>.up.railway.app`
+   - `VITE_API_BASE_URL=https://<your-railway-domain>`
 4. Deploy. The `vercel.json` rewrite sends all routes to `index.html` so the SPA handles navigation.
+5. Copy the Vercel frontend URL.
+6. In Railway, update the backend variable:
+   - `APP_CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>`
+7. Redeploy or restart the backend, then sign in through the Vercel frontend.
 
-### Local cleanup before deploying
+### Deployment Notes
 
-- The `.env` file is gitignored and stays on your laptop. Railway does not read it. You do not need to rotate your local development password.
-- The real rule: pick a **different, strong** password for `APP_PASSWORD` in Railway than the one you use in `.env`. Reusing passwords across local dev and production is a common leak vector.
-- The default `admin` / `dev-password` credentials in `application.yaml` are only fallbacks; production must set `APP_USERNAME` and `APP_PASSWORD` or the deployed app will start with weak defaults.
-
-### Production notes
-
-- HTTPS is required because Basic Auth sends credentials with every request. Both Railway and Vercel provide TLS by default.
+- Keep `.env` local. It is gitignored and Railway/Vercel do not read it.
+- Use different, strong production values for `APP_USERNAME` and `APP_PASSWORD`.
+- Do not use Railway's `DATABASE_PUBLIC_URL` for the deployed backend. Use the private `PG*` variables.
+- After the frontend is deployed, `APP_CORS_ALLOWED_ORIGINS` must match the Vercel URL exactly.
+- HTTPS is required because Basic Auth sends credentials with every request. Railway and Vercel provide HTTPS by default.
 - Swagger and OpenAPI are disabled outside the `dev` profile.
-- Database schema is managed by Flyway (`src/main/resources/db/migration`). Never set `spring.jpa.hibernate.ddl-auto` to `update` or `create` in production; the `prod` profile pins it to `validate`.
-- The `dev` profile no longer relies on `ddl-auto: update` either; the Flyway migration is the single source of truth for the schema in every environment.
+- Database schema is managed by Flyway in `src/main/resources/db/migration`.
+- Never set `spring.jpa.hibernate.ddl-auto` to `update` or `create` in production. The `prod` profile uses `validate` so Hibernate checks the Flyway-managed schema.
 
 ## Roadmap
 
