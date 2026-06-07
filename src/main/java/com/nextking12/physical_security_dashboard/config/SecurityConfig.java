@@ -1,12 +1,8 @@
 package com.nextking12.physical_security_dashboard.config;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -18,15 +14,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 
 @Configuration
 public class SecurityConfig {
-
-	private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
 	@Value("${spring.security.user.name}")
 	private String username;
@@ -55,10 +47,8 @@ public class SecurityConfig {
 						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
 						.anyRequest().authenticated())
 				.httpBasic(basic -> basic
-						.authenticationEntryPoint((request, response, authException) -> {
-							logFailedBasicAuthAttempt(request.getHeader("Authorization"));
-							response.setStatus(HttpStatus.UNAUTHORIZED.value());
-						}))
+						.authenticationEntryPoint((request, response, authException) ->
+								response.setStatus(HttpStatus.UNAUTHORIZED.value())))
 				.build();
 	}
 
@@ -78,33 +68,5 @@ public class SecurityConfig {
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/api/**", configuration);
 		return source;
-	}
-
-	@EventListener(ApplicationReadyEvent.class)
-	void logConfiguredSecurityUser() {
-		logger.info("Configured Basic Auth user '{}' with password length {}", username, password.length());
-	}
-
-	private void logFailedBasicAuthAttempt(String authorizationHeader) {
-		if (authorizationHeader == null || !authorizationHeader.startsWith("Basic ")) {
-			logger.info("Rejected Basic Auth request without Basic Authorization header");
-			return;
-		}
-
-		try {
-			String encodedCredentials = authorizationHeader.substring("Basic ".length());
-			String credentials = new String(Base64.getDecoder().decode(encodedCredentials), StandardCharsets.UTF_8);
-			int separator = credentials.indexOf(':');
-			if (separator < 0) {
-				logger.info("Rejected Basic Auth request with malformed credentials");
-				return;
-			}
-
-			String attemptedUsername = credentials.substring(0, separator);
-			String attemptedPassword = credentials.substring(separator + 1);
-			logger.info("Rejected Basic Auth user '{}' with password length {}", attemptedUsername, attemptedPassword.length());
-		} catch (IllegalArgumentException exception) {
-			logger.info("Rejected Basic Auth request with invalid Base64 credentials");
-		}
 	}
 }
