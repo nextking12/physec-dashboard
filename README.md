@@ -260,7 +260,8 @@ The first boot runs Flyway migrations and creates the `devices` table automatica
 4. Deploy. The `vercel.json` rewrite sends all routes to `index.html` so the SPA handles navigation.
 5. Copy the Vercel frontend URL.
 6. In Railway, update the backend variable:
-   - `APP_CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>`
+   - `APP_CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>,https://<your-project>-*-<your-team>.vercel.app`
+   - The second entry is optional and uses a wildcard to match Vercel preview deployments, which get a unique build-hash subdomain on every deploy.
 7. Redeploy or restart the backend, then sign in through the Vercel frontend.
 
 ### Deployment Notes
@@ -268,7 +269,7 @@ The first boot runs Flyway migrations and creates the `devices` table automatica
 - Keep `.env` local. It is gitignored and Railway/Vercel do not read it.
 - Use different, strong production values for `APP_USERNAME` and `APP_PASSWORD`.
 - Do not use Railway's `DATABASE_PUBLIC_URL` for the deployed backend. Use the private `PG*` variables.
-- After the frontend is deployed, `APP_CORS_ALLOWED_ORIGINS` must match the Vercel URL exactly.
+- `APP_CORS_ALLOWED_ORIGINS` accepts comma-separated origin patterns (exact URLs or patterns containing `*` wildcards). Add your production Vercel URL, plus a wildcard pattern if you want preview deployments to work.
 - HTTPS is required because Basic Auth sends credentials with every request. Railway and Vercel provide HTTPS by default.
 - Swagger and OpenAPI are disabled outside the `dev` profile.
 - Database schema is managed by Flyway in `src/main/resources/db/migration`.
