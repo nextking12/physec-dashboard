@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Camera,
   CheckCircle2,
+  ClipboardList,
   CreditCard,
   Edit3,
   Filter,
@@ -20,6 +21,7 @@ import {
 const DEVICE_TYPES = ["CAMERA", "CARD_READER", "ALARM_PANEL", "MOTION_SENSOR"];
 const DEVICE_STATUSES = ["ONLINE", "OFFLINE", "MAINTENANCE", "ALERTING"];
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const SESSION_STORAGE_KEY = "psd.session";
 
 const EMPTY_FORM = {
   name: "",
@@ -46,9 +48,17 @@ const typeLabels = {
   MOTION_SENSOR: "Motion Sensor"
 };
 
-function encodeBasicAuth(username, password) {
-  return btoa(`${username}:${password}`);
-}
+const roleLabels = {
+  ADMIN: "Admin",
+  OPERATOR: "Operator",
+  VIEWER: "Viewer"
+};
+
+const auditActionLabels = {
+  CREATE: "Created",
+  UPDATE: "Updated",
+  DELETE: "Deleted"
+};
 
 function apiUrl(path) {
   return `${API_BASE_URL}${path}`;
@@ -62,16 +72,27 @@ function toTitle(value) {
     .join(" ");
 }
 
+function formatTimestamp(value) {
+  if (!value) return "Unknown time";
+  return new Date(value).toLocaleString();
+}
+
 export default function App() {
-  const [credentials, setCredentials] = useState(() => {
-    const saved = sessionStorage.getItem("psd.credentials");
+  const [session, setSession] = useState(() => {
+    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
     return saved ? JSON.parse(saved) : null;
   });
+  const [isRestoringSession, setIsRestoringSession] = useState(
+    () => !!sessionStorage.getItem(SESSION_STORAGE_KEY)
+  );
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [activeTab, setActiveTab] = useState("devices");
   const [devices, setDevices] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [filters, setFilters] = useState({ status: "", type: "", location: "" });
+  const [auditFilters, setAuditFilters] = useState({ action: "", entityType: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -79,9 +100,13 @@ export default function App() {
   const [deviceForm, setDeviceForm] = useState(EMPTY_FORM);
 
   const authHeader = useMemo(() => {
-    if (!credentials) return null;
-    return `Basic ${encodeBasicAuth(credentials.username, credentials.password)}`;
-  }, [credentials]);
+    if (!session?.accessToken) return null;
+    return `Bearer ${session.accessToken}`;
+  }, [session]);
+
+  const canModify = session?.role === "ADMIN" || session?.role === "OPERATOR";
+  const canDelete = session?.role === "ADMIN";
+  const isAdmin = session?.role === "ADMIN";
 
   const metrics = useMemo(() => {
     return DEVICE_STATUSES.map((status) => ({
@@ -102,7 +127,11 @@ export default function App() {
     });
 
     if (response.status === 401) {
-      throw new Error("Invalid username or password.");
+      throw new Error("Session expired. Please sign in again.");
+    }
+
+    if (response.status === 403) {
+      throw new Error("You do not have permission to perform this action.");
     }
 
     if (!response.ok) {
@@ -117,8 +146,48 @@ export default function App() {
     return response.json();
   }
 
+  function persistSession(nextSession) {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
+    setSession(nextSession);
+  }
+
+  function logout() {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    setSession(null);
+    setDevices([]);
+    setAuditLogs([]);
+    setActiveTab("devices");
+  }
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!saved) {
+      setIsRestoringSession(false);
+      return;
+    }
+
+    const parsed = JSON.parse(saved);
+
+    async function restoreSession() {
+      try {
+        const me = await apiRequest("/api/auth/me", {}, `Bearer ${parsed.accessToken}`);
+        persistSession({
+          ...parsed,
+          username: me.username,
+          role: me.role
+        });
+      } catch {
+        logout();
+      } finally {
+        setIsRestoringSession(false);
+      }
+    }
+
+    restoreSession();
+  }, []);
+
   async function loadDevices() {
-    if (!credentials) return;
+    if (!session) return;
 
     setIsLoading(true);
     setError("");
@@ -134,7 +203,31 @@ export default function App() {
       setDevices(data);
     } catch (err) {
       setError(err.message);
-      if (err.message.includes("Invalid")) {
+      if (err.message.includes("Session expired")) {
+        logout();
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function loadAuditLogs() {
+    if (!session || !isAdmin) return;
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const params = new URLSearchParams();
+      if (auditFilters.action) params.set("action", auditFilters.action);
+      if (auditFilters.entityType.trim()) params.set("entityType", auditFilters.entityType.trim());
+
+      const query = params.toString();
+      const data = await apiRequest(`/api/audit-logs${query ? `?${query}` : ""}`);
+      setAuditLogs(data);
+    } catch (err) {
+      setError(err.message);
+      if (err.message.includes("Session expired")) {
         logout();
       }
     } finally {
@@ -143,39 +236,49 @@ export default function App() {
   }
 
   useEffect(() => {
-    loadDevices();
-  }, [credentials, filters.status, filters.type]);
+    if (!session || isRestoringSession) return;
+
+    if (activeTab === "devices") {
+      loadDevices();
+    } else if (activeTab === "audit") {
+      loadAuditLogs();
+    }
+  }, [session, isRestoringSession, activeTab, filters.status, filters.type]);
 
   async function handleLogin(event) {
     event.preventDefault();
-    const nextCredentials = {
-      username: loginForm.username.trim(),
-      password: loginForm.password
-    };
-
     setIsLoggingIn(true);
     setLoginError("");
 
     try {
-      await apiRequest(
-        "/api/devices",
-        {},
-        `Basic ${encodeBasicAuth(nextCredentials.username, nextCredentials.password)}`
-      );
-      sessionStorage.setItem("psd.credentials", JSON.stringify(nextCredentials));
-      setCredentials(nextCredentials);
+      const response = await fetch(apiUrl("/api/auth/login"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: loginForm.username.trim(),
+          password: loginForm.password
+        })
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Invalid username or password.");
+      }
+
+      const data = await response.json();
+      persistSession({
+        accessToken: data.accessToken,
+        expiresAt: Date.now() + data.expiresIn,
+        username: data.username,
+        role: data.role
+      });
       setLoginForm({ username: "", password: "" });
+      setActiveTab("devices");
     } catch (err) {
       setLoginError(err.message);
     } finally {
       setIsLoggingIn(false);
     }
-  }
-
-  function logout() {
-    sessionStorage.removeItem("psd.credentials");
-    setCredentials(null);
-    setDevices([]);
   }
 
   function openCreatePanel() {
@@ -239,7 +342,17 @@ export default function App() {
     }
   }
 
-  if (!credentials) {
+  if (isRestoringSession) {
+    return (
+      <main className="login-shell">
+        <section className="login-panel">
+          <h1>Restoring session...</h1>
+        </section>
+      </main>
+    );
+  }
+
+  if (!session) {
     return (
       <main className="login-shell">
         <section className="login-panel">
@@ -279,7 +392,7 @@ export default function App() {
             </label>
             <button type="submit" className="primary-button" disabled={isLoggingIn}>
               <Shield size={18} />
-              {isLoggingIn ? "Checking..." : "Sign In"}
+              {isLoggingIn ? "Signing in..." : "Sign In"}
             </button>
           </form>
         </section>
@@ -292,10 +405,16 @@ export default function App() {
       <header className="top-bar">
         <div>
           <p className="eyebrow">Security Operations</p>
-          <h1>Device Dashboard</h1>
+          <h1>{activeTab === "devices" ? "Device Dashboard" : "Audit Log"}</h1>
         </div>
         <div className="top-actions">
-          <button type="button" className="icon-button" onClick={loadDevices} title="Refresh devices">
+          <span className="role-badge">{roleLabels[session.role] || session.role}</span>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={activeTab === "devices" ? loadDevices : loadAuditLogs}
+            title="Refresh current view"
+          >
             <RefreshCw size={18} />
           </button>
           <button type="button" className="secondary-button" onClick={logout}>
@@ -305,6 +424,27 @@ export default function App() {
         </div>
       </header>
 
+      <nav className="nav-tabs" aria-label="Dashboard sections">
+        <button
+          type="button"
+          className={`nav-tab ${activeTab === "devices" ? "active" : ""}`}
+          onClick={() => setActiveTab("devices")}
+        >
+          <Shield size={16} />
+          Devices
+        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            className={`nav-tab ${activeTab === "audit" ? "active" : ""}`}
+            onClick={() => setActiveTab("audit")}
+          >
+            <ClipboardList size={16} />
+            Audit Log
+          </button>
+        )}
+      </nav>
+
       {error && (
         <div className="error-banner">
           <AlertTriangle size={18} />
@@ -312,129 +452,216 @@ export default function App() {
         </div>
       )}
 
-      <section className="metrics-grid">
-        <MetricCard icon={<Activity size={20} />} label="Total Devices" value={devices.length} />
-        {metrics.map((metric) => (
-          <MetricCard key={metric.status} label={metric.label} value={metric.count} status={metric.status} />
-        ))}
-      </section>
-
-      <section className="toolbar">
-        <div className="filters-title">
-          <Filter size={18} />
-          <span>Filters</span>
-        </div>
-        <label>
-          Status
-          <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
-            <option value="">All statuses</option>
-            {DEVICE_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {statusLabels[status]}
-              </option>
+      {activeTab === "devices" && (
+        <>
+          <section className="metrics-grid">
+            <MetricCard icon={<Activity size={20} />} label="Total Devices" value={devices.length} />
+            {metrics.map((metric) => (
+              <MetricCard key={metric.status} label={metric.label} value={metric.count} status={metric.status} />
             ))}
-          </select>
-        </label>
-        <label>
-          Type
-          <select value={filters.type} onChange={(event) => setFilters({ ...filters, type: event.target.value })}>
-            <option value="">All types</option>
-            {DEVICE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {typeLabels[type]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="location-filter">
-          Location Filter
-          <input
-            value={filters.location}
-            onChange={(event) => setFilters({ ...filters, location: event.target.value })}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") loadDevices();
-            }}
-            placeholder="Search location"
-          />
-        </label>
-        <button type="button" className="secondary-button" onClick={loadDevices}>
-          <Filter size={17} />
-          Apply
-        </button>
-        <button type="button" className="primary-button" onClick={openCreatePanel}>
-          <Plus size={18} />
-          Add Device
-        </button>
-      </section>
+          </section>
 
-      <section className="table-section">
-        <div className="section-heading">
-          <h2>Devices</h2>
-          <span>{isLoading ? "Loading..." : `${devices.length} shown`}</span>
-        </div>
+          <section className="toolbar">
+            <div className="filters-title">
+              <Filter size={18} />
+              <span>Filters</span>
+            </div>
+            <label>
+              Status
+              <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
+                <option value="">All statuses</option>
+                {DEVICE_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {statusLabels[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Type
+              <select value={filters.type} onChange={(event) => setFilters({ ...filters, type: event.target.value })}>
+                <option value="">All types</option>
+                {DEVICE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {typeLabels[type]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="location-filter">
+              Location Filter
+              <input
+                value={filters.location}
+                onChange={(event) => setFilters({ ...filters, location: event.target.value })}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") loadDevices();
+                }}
+                placeholder="Search location"
+              />
+            </label>
+            <button type="button" className="secondary-button" onClick={loadDevices}>
+              <Filter size={17} />
+              Apply
+            </button>
+            {canModify && (
+              <button type="button" className="primary-button" onClick={openCreatePanel}>
+                <Plus size={18} />
+                Add Device
+              </button>
+            )}
+          </section>
 
-        <div className="device-table-wrap">
-          <table className="device-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Location</th>
-                <th>Network</th>
-                <th>Manufacturer</th>
-                <th aria-label="Actions" />
-              </tr>
-            </thead>
-            <tbody>
-              {devices.map((device) => (
-                <tr key={device.id}>
-                  <td>
-                    <div className="name-cell">
-                      {typeIcon(device.type)}
-                      <div>
-                        <strong>{device.name}</strong>
-                        <span>{device.model || "No model recorded"}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{typeLabels[device.type] || toTitle(device.type)}</td>
-                  <td>
-                    <span className={`status-pill ${device.status.toLowerCase()}`}>{statusLabels[device.status]}</span>
-                  </td>
-                  <td>{device.location}</td>
-                  <td>
-                    <div className="stacked">
-                      <span>{device.ipAddress || "No IP"}</span>
-                      <small>{device.macAddress || "No MAC"}</small>
-                    </div>
-                  </td>
-                  <td>{device.manufacturer || "Not recorded"}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button type="button" className="icon-button" title="Edit device" onClick={() => openEditPanel(device)}>
-                        <Edit3 size={16} />
-                      </button>
-                      <button type="button" className="icon-button danger" title="Delete device" onClick={() => deleteDevice(device)}>
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!devices.length && !isLoading && (
-                <tr>
-                  <td colSpan="7" className="empty-state">
-                    No devices match the current view.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+          <section className="table-section">
+            <div className="section-heading">
+              <h2>Devices</h2>
+              <span>{isLoading ? "Loading..." : `${devices.length} shown`}</span>
+            </div>
 
-      {isPanelOpen && (
+            <div className="device-table-wrap">
+              <table className="device-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Location</th>
+                    <th>Network</th>
+                    <th>Manufacturer</th>
+                    {canModify && <th aria-label="Actions" />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {devices.map((device) => (
+                    <tr key={device.id}>
+                      <td>
+                        <div className="name-cell">
+                          {typeIcon(device.type)}
+                          <div>
+                            <strong>{device.name}</strong>
+                            <span>{device.model || "No model recorded"}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{typeLabels[device.type] || toTitle(device.type)}</td>
+                      <td>
+                        <span className={`status-pill ${device.status.toLowerCase()}`}>{statusLabels[device.status]}</span>
+                      </td>
+                      <td>{device.location}</td>
+                      <td>
+                        <div className="stacked">
+                          <span>{device.ipAddress || "No IP"}</span>
+                          <small>{device.macAddress || "No MAC"}</small>
+                        </div>
+                      </td>
+                      <td>{device.manufacturer || "Not recorded"}</td>
+                      {canModify && (
+                        <td>
+                          <div className="row-actions">
+                            <button type="button" className="icon-button" title="Edit device" onClick={() => openEditPanel(device)}>
+                              <Edit3 size={16} />
+                            </button>
+                            {canDelete && (
+                              <button type="button" className="icon-button danger" title="Delete device" onClick={() => deleteDevice(device)}>
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                  {!devices.length && !isLoading && (
+                    <tr>
+                      <td colSpan={canModify ? 7 : 6} className="empty-state">
+                        No devices match the current view.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
+
+      {activeTab === "audit" && isAdmin && (
+        <>
+          <section className="toolbar">
+            <div className="filters-title">
+              <Filter size={18} />
+              <span>Audit Filters</span>
+            </div>
+            <label>
+              Action
+              <select
+                value={auditFilters.action}
+                onChange={(event) => setAuditFilters({ ...auditFilters, action: event.target.value })}
+              >
+                <option value="">All actions</option>
+                <option value="CREATE">Created</option>
+                <option value="UPDATE">Updated</option>
+                <option value="DELETE">Deleted</option>
+              </select>
+            </label>
+            <label>
+              Entity Type
+              <input
+                value={auditFilters.entityType}
+                onChange={(event) => setAuditFilters({ ...auditFilters, entityType: event.target.value })}
+                placeholder="DEVICE"
+              />
+            </label>
+            <button type="button" className="secondary-button" onClick={loadAuditLogs}>
+              <Filter size={17} />
+              Apply
+            </button>
+          </section>
+
+          <section className="table-section">
+            <div className="section-heading">
+              <h2>Recent Activity</h2>
+              <span>{isLoading ? "Loading..." : `${auditLogs.length} entries`}</span>
+            </div>
+
+            <div className="device-table-wrap">
+              <table className="device-table">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{formatTimestamp(entry.occurredAt)}</td>
+                      <td>{entry.username}</td>
+                      <td>{auditActionLabels[entry.action] || entry.action}</td>
+                      <td>
+                        {entry.entityType}
+                        {entry.entityId ? ` #${entry.entityId}` : ""}
+                      </td>
+                      <td>{entry.details || "—"}</td>
+                    </tr>
+                  ))}
+                  {!auditLogs.length && !isLoading && (
+                    <tr>
+                      <td colSpan="5" className="empty-state">
+                        No audit entries match the current filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
+
+      {isPanelOpen && canModify && (
         <div className="drawer-backdrop" role="presentation">
           <aside className="drawer" aria-label={editingDevice ? "Edit device" : "Create device"}>
             <div className="drawer-header">

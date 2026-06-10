@@ -1,5 +1,6 @@
 package com.nextking12.physical_security_dashboard;
 
+import com.nextking12.physical_security_dashboard.repository.AuditLogRepository;
 import com.nextking12.physical_security_dashboard.repository.DeviceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,9 @@ class PhysicalSecurityDashboardApplicationTests {
 	@Autowired
 	DeviceRepository deviceRepository;
 
+	@Autowired
+	AuditLogRepository auditLogRepository;
+
 	@DynamicPropertySource
 	static void configurePostgres(DynamicPropertyRegistry registry) {
 		registry.add("spring.datasource.url", postgres::getJdbcUrl);
@@ -56,6 +60,7 @@ class PhysicalSecurityDashboardApplicationTests {
 
 	@BeforeEach
 	void setUp() {
+		auditLogRepository.deleteAll();
 		deviceRepository.deleteAll();
 	}
 
@@ -172,6 +177,32 @@ class PhysicalSecurityDashboardApplicationTests {
 		String operatorToken = obtainAccessToken(OPERATOR_USERNAME, SEED_PASSWORD);
 
 		mockMvc.perform(delete("/api/devices/" + deviceId)
+						.header("Authorization", "Bearer " + operatorToken))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void creatingDeviceWritesAuditLog() throws Exception {
+		String operatorToken = obtainAccessToken(OPERATOR_USERNAME, SEED_PASSWORD);
+
+		createDevice(operatorToken, "Audited Camera", "CAMERA", "Lobby", "ONLINE");
+
+		String adminToken = obtainAccessToken(ADMIN_USERNAME, SEED_PASSWORD);
+
+		mockMvc.perform(get("/api/audit-logs")
+						.header("Authorization", "Bearer " + adminToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].username").value(OPERATOR_USERNAME))
+				.andExpect(jsonPath("$[0].action").value("CREATE"))
+				.andExpect(jsonPath("$[0].entityType").value("DEVICE"))
+				.andExpect(jsonPath("$[0].details").value("name=Audited Camera"));
+	}
+
+	@Test
+	void operatorCannotViewAuditLogs() throws Exception {
+		String operatorToken = obtainAccessToken(OPERATOR_USERNAME, SEED_PASSWORD);
+
+		mockMvc.perform(get("/api/audit-logs")
 						.header("Authorization", "Bearer " + operatorToken))
 				.andExpect(status().isForbidden());
 	}
