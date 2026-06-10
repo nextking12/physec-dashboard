@@ -3,6 +3,8 @@ spring:
     user:
       name: ${APP_USERNAME:admin}
       password: ${APP_PASSWORD:dev-password}
+  flyway:
+    locations: classpath:db/migration,classpath:db/dev-migration
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:physical_security_dashboard}
     username: ${POSTGRES_USER:myuser}

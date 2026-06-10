@@ -117,7 +117,7 @@ http://localhost:5173
 
 The Vite dev server proxies `/api` and `/actuator` requests to the Spring Boot backend at `http://localhost:8080`.
 
-Sign in with one of the seeded dev users. All three use the password `changeme`:
+When the backend runs with the `dev` profile, Flyway also runs local-only seed data from `src/main/resources/db/dev-migration`. Sign in with one of the seeded dev users. All three use the password `changeme`:
 
 ```text
 admin    (ADMIN)
@@ -323,13 +323,17 @@ The deployed app uses Railway for the Spring Boot API and PostgreSQL database, a
 
 ```bash
 curl https://<your-railway-domain>/actuator/health
-
-curl -s -X POST https://<your-railway-domain>/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"changeme"}'
 ```
 
-The first boot runs Flyway migrations and creates the `devices`, `users`, and `audit_logs` tables automatically. The seed migration creates `admin`, `operator`, and `viewer` users with the dev password `changeme`; change or replace these before exposing a public production deployment.
+The first boot runs Flyway migrations and creates the `devices`, `users`, and `audit_logs` tables automatically. Production does not seed login users. Create production users manually with private credentials before expecting login to work.
+
+After creating a production user, verify login with that private username and password:
+
+```bash
+curl -s -X POST https://<your-railway-domain>/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"<your-production-username>","password":"<your-production-password>"}'
+```
 
 ### Frontend on Vercel
 
@@ -362,4 +366,4 @@ The first boot runs Flyway migrations and creates the `devices`, `users`, and `a
 - Add backend dashboard summary metrics
 - Add security event tracking
 - Add alert severity filtering
-- Replace seeded dev users with production-safe user provisioning
+- Add admin user management for production accounts

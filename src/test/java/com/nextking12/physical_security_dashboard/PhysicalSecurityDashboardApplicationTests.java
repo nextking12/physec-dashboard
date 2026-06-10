@@ -1,13 +1,17 @@
 package com.nextking12.physical_security_dashboard;
 
+import com.nextking12.physical_security_dashboard.entity.User;
+import com.nextking12.physical_security_dashboard.entity.UserRole;
 import com.nextking12.physical_security_dashboard.repository.AuditLogRepository;
 import com.nextking12.physical_security_dashboard.repository.DeviceRepository;
+import com.nextking12.physical_security_dashboard.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -50,6 +54,12 @@ class PhysicalSecurityDashboardApplicationTests {
 	@Autowired
 	AuditLogRepository auditLogRepository;
 
+	@Autowired
+	UserRepository userRepository;
+
+	@Autowired
+	PasswordEncoder passwordEncoder;
+
 	@DynamicPropertySource
 	static void configurePostgres(DynamicPropertyRegistry registry) {
 		registry.add("spring.datasource.url", postgres::getJdbcUrl);
@@ -62,6 +72,11 @@ class PhysicalSecurityDashboardApplicationTests {
 	void setUp() {
 		auditLogRepository.deleteAll();
 		deviceRepository.deleteAll();
+		userRepository.deleteAll();
+
+		createUser(ADMIN_USERNAME, UserRole.ADMIN);
+		createUser(OPERATOR_USERNAME, UserRole.OPERATOR);
+		createUser(VIEWER_USERNAME, UserRole.VIEWER);
 	}
 
 	@Test
@@ -226,6 +241,14 @@ class PhysicalSecurityDashboardApplicationTests {
 				.getContentAsString();
 
 		return objectMapper.readTree(response).get("accessToken").asText();
+	}
+
+	private void createUser(String username, UserRole role) {
+		User user = new User();
+		user.setUsername(username);
+		user.setPasswordHash(passwordEncoder.encode(SEED_PASSWORD));
+		user.setRole(role);
+		userRepository.save(user);
 	}
 
 	private void createDevice(String token, String name, String type, String location, String status) throws Exception {
