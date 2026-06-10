@@ -4,6 +4,7 @@ import com.nextking12.physical_security_dashboard.auth.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
 	@Bean
@@ -43,7 +45,9 @@ public class SecurityConfig {
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.exceptionHandling(ex -> ex
 						.authenticationEntryPoint((request, response, authException) ->
-								response.setStatus(HttpStatus.UNAUTHORIZED.value())))
+								response.setStatus(HttpStatus.UNAUTHORIZED.value()))
+						.accessDeniedHandler((request, response, accessDeniedException) ->
+								response.setStatus(HttpStatus.FORBIDDEN.value())))
 				.build();
 	}
 

@@ -18,6 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,7 +33,9 @@ class PhysicalSecurityDashboardApplicationTests {
 	static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
 
 	private static final String ADMIN_USERNAME = "admin";
-	private static final String ADMIN_PASSWORD = "changeme";
+	private static final String OPERATOR_USERNAME = "operator";
+	private static final String VIEWER_USERNAME = "viewer";
+	private static final String SEED_PASSWORD = "changeme";
 
 	@Autowired
 	MockMvc mockMvc;
@@ -62,7 +65,7 @@ class PhysicalSecurityDashboardApplicationTests {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(Map.of(
 								"username", ADMIN_USERNAME,
-								"password", ADMIN_PASSWORD
+								"password", SEED_PASSWORD
 						))))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.accessToken").isNotEmpty())
@@ -72,7 +75,7 @@ class PhysicalSecurityDashboardApplicationTests {
 
 	@Test
 	void meReturnsCurrentUserFromJwt() throws Exception {
-		String token = obtainAccessToken(ADMIN_USERNAME, ADMIN_PASSWORD);
+		String token = obtainAccessToken(ADMIN_USERNAME, SEED_PASSWORD);
 
 		mockMvc.perform(get("/api/auth/me")
 						.header("Authorization", "Bearer " + token))
@@ -83,7 +86,7 @@ class PhysicalSecurityDashboardApplicationTests {
 
 	@Test
 	void filtersDevicesByStatusTypeAndLocation() throws Exception {
-		String token = obtainAccessToken(ADMIN_USERNAME, ADMIN_PASSWORD);
+		String token = obtainAccessToken(ADMIN_USERNAME, SEED_PASSWORD);
 
 		createDevice(token, "Front Entrance Camera", "CAMERA", "Main Lobby", "ONLINE");
 		createDevice(token, "Rear Door Reader", "CARD_READER", "Rear Entrance", "OFFLINE");
@@ -117,7 +120,7 @@ class PhysicalSecurityDashboardApplicationTests {
 
 	@Test
 	void rejectsInvalidEnumFilter() throws Exception {
-		String token = obtainAccessToken(ADMIN_USERNAME, ADMIN_PASSWORD);
+		String token = obtainAccessToken(ADMIN_USERNAME, SEED_PASSWORD);
 
 		mockMvc.perform(get("/api/devices")
 						.param("status", "banana")
@@ -129,6 +132,48 @@ class PhysicalSecurityDashboardApplicationTests {
 	void requiresAuthenticationForDeviceApi() throws Exception {
 		mockMvc.perform(get("/api/devices"))
 				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void viewerCanListDevices() throws Exception {
+		String adminToken = obtainAccessToken(ADMIN_USERNAME, SEED_PASSWORD);
+		createDevice(adminToken, "Lobby Camera", "CAMERA", "Lobby", "ONLINE");
+
+		String viewerToken = obtainAccessToken(VIEWER_USERNAME, SEED_PASSWORD);
+
+		mockMvc.perform(get("/api/devices")
+						.header("Authorization", "Bearer " + viewerToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].name").value("Lobby Camera"));
+	}
+
+	@Test
+	void viewerCannotCreateDevice() throws Exception {
+		String viewerToken = obtainAccessToken(VIEWER_USERNAME, SEED_PASSWORD);
+
+		mockMvc.perform(post("/api/devices")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(Map.of(
+								"name", "Blocked Camera",
+								"type", "CAMERA",
+								"location", "Lobby",
+								"status", "ONLINE"
+						)))
+						.header("Authorization", "Bearer " + viewerToken))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void operatorCannotDeleteDevice() throws Exception {
+		String adminToken = obtainAccessToken(ADMIN_USERNAME, SEED_PASSWORD);
+		createDevice(adminToken, "Delete Me", "CAMERA", "Lobby", "ONLINE");
+
+		long deviceId = deviceRepository.findAll().getFirst().getId();
+		String operatorToken = obtainAccessToken(OPERATOR_USERNAME, SEED_PASSWORD);
+
+		mockMvc.perform(delete("/api/devices/" + deviceId)
+						.header("Authorization", "Bearer " + operatorToken))
+				.andExpect(status().isForbidden());
 	}
 
 	@Test
