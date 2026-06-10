@@ -2,7 +2,7 @@
 
 A full-stack physical security operations dashboard. The current version manages security devices such as cameras, card readers, alarm panels, and motion sensors.
 
-This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQL persistence, Flyway migrations, Basic Auth, integration tests, and a React dashboard frontend.
+This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQL persistence, Flyway migrations, JWT authentication, role-based access control, audit logging, integration tests, and a React dashboard frontend.
 
 ## Tech Stack
 
@@ -26,12 +26,13 @@ This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQ
 - Store optional asset details such as model, MAC address, IP address, and manufacturer
 - Validate required request fields
 - Use enums for controlled device types and statuses
-- Protect API endpoints with HTTP Basic authentication
+- Authenticate with JWT bearer tokens and role-based access control
+- Record an immutable audit trail for device create, update, and delete actions
 - Expose Swagger only in the local dev profile
 - Manage database schema with Flyway migrations
 - Expose only the Actuator health endpoint in production
 - Run integration tests against PostgreSQL with Testcontainers
-- Use a React dashboard for login, device metrics, filtering, and device management
+- Use a React dashboard for login, device metrics, filtering, role-gated device management, and admin audit review
 
 ## Requirements
 
@@ -56,21 +57,23 @@ POSTGRES_USER=local_user
 POSTGRES_PASSWORD=change-me-local-postgres-password
 POSTGRES_PORT=5432
 
-APP_USERNAME=local_admin
-APP_PASSWORD=change-me-local-app-password
 APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+JWT_SECRET=change-me-local-jwt-secret-at-least-32-chars
+JWT_EXPIRATION_MS=3600000
 ```
 
-Start PostgreSQL:
+Always load `.env` before starting the backend so Spring and Docker Compose use the same database credentials:
 
 ```bash
-docker compose up -d
-```
-
-Start the application with the dev profile and your local `.env` values:
-
-```bash
+set -a; source .env; set +a; docker compose up -d
 set -a; source .env; set +a; ./mvnw spring-boot:run -Pdev
+```
+
+If Postgres was previously started with different credentials, reset the local volume:
+
+```bash
+docker compose down -v
+set -a; source .env; set +a; docker compose up -d
 ```
 
 The API runs at:
@@ -114,7 +117,13 @@ http://localhost:5173
 
 The Vite dev server proxies `/api` and `/actuator` requests to the Spring Boot backend at `http://localhost:8080`.
 
-Use the same `APP_USERNAME` and `APP_PASSWORD` values from your local `.env` file to sign in.
+When the backend runs with the `dev` profile, Flyway also runs local-only seed data from `src/main/resources/db/dev-migration`. Sign in with one of the seeded dev users. All three use the password `changeme`:
+
+```text
+admin    (ADMIN)
+operator (OPERATOR)
+viewer   (VIEWER)
+```
 
 ## Swagger
 
@@ -124,16 +133,65 @@ Swagger is enabled only when running with the `dev` profile:
 http://localhost:8080/swagger-ui.html
 ```
 
-Click `Authorize` in Swagger and use the `APP_USERNAME` and `APP_PASSWORD` values from your local `.env`.
+In Swagger, call `POST /api/auth/login`, copy the `accessToken`, then click `Authorize` and paste:
+
+```text
+Bearer <accessToken>
+```
+
+## Authentication
+
+### Login
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+```
+
+```json
+{
+  "username": "admin",
+  "password": "changeme"
+}
+```
+
+Example response:
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "expiresIn": 3600000,
+  "username": "admin",
+  "role": "ADMIN"
+}
+```
+
+### Current User
+
+```http
+GET /api/auth/me
+Authorization: Bearer <accessToken>
+```
+
+All protected `/api/**` endpoints require a valid JWT in the `Authorization` header.
+
+## Roles
+
+| Action | VIEWER | OPERATOR | ADMIN |
+| --- | --- | --- | --- |
+| `GET /api/devices` | yes | yes | yes |
+| `POST /api/devices` | no | yes | yes |
+| `PUT /api/devices/{id}` | no | yes | yes |
+| `DELETE /api/devices/{id}` | no | no | yes |
+| `GET /api/audit-logs` | no | no | yes |
 
 ## API Overview
-
-All `/api/**` endpoints require HTTP Basic authentication.
 
 ### List Devices
 
 ```http
 GET /api/devices
+Authorization: Bearer <accessToken>
 ```
 
 Optional query parameters:
@@ -154,12 +212,14 @@ GET /api/devices?status=ONLINE&type=CAMERA&location=lobby
 
 ```http
 GET /api/devices/{id}
+Authorization: Bearer <accessToken>
 ```
 
 ### Create Device
 
 ```http
 POST /api/devices
+Authorization: Bearer <accessToken>
 Content-Type: application/json
 ```
 
@@ -180,6 +240,7 @@ Content-Type: application/json
 
 ```http
 PUT /api/devices/{id}
+Authorization: Bearer <accessToken>
 Content-Type: application/json
 ```
 
@@ -189,9 +250,24 @@ Uses the same request body shape as create.
 
 ```http
 DELETE /api/devices/{id}
+Authorization: Bearer <accessToken>
 ```
 
 Returns `204 No Content` when successful.
+
+### List Audit Logs
+
+```http
+GET /api/audit-logs
+Authorization: Bearer <accessToken>
+```
+
+Admin only. Optional query parameters:
+
+```text
+action=CREATE
+entityType=DEVICE
+```
 
 ## Device Values
 
@@ -234,8 +310,9 @@ The deployed app uses Railway for the Spring Boot API and PostgreSQL database, a
 3. Add a Railway PostgreSQL database to the same project.
 4. In the backend service's **Variables** tab, set:
    - `SPRING_PROFILES_ACTIVE=prod`
-   - `APP_USERNAME=<your-username>`
-   - `APP_PASSWORD=<strong-password>`
+   - `JWT_SECRET=<random-32+-character-secret>`
+   - `JWT_EXPIRATION_MS=3600000`
+   - `APP_CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>`
    - `PGHOST=${{ Postgres.PGHOST }}`
    - `PGPORT=${{ Postgres.PGPORT }}`
    - `PGDATABASE=${{ Postgres.PGDATABASE }}`
@@ -246,10 +323,17 @@ The deployed app uses Railway for the Spring Boot API and PostgreSQL database, a
 
 ```bash
 curl https://<your-railway-domain>/actuator/health
-curl -u <your-username>:<strong-password> https://<your-railway-domain>/api/devices
 ```
 
-The first boot runs Flyway migrations and creates the `devices` table automatically.
+The first boot runs Flyway migrations and creates the `devices`, `users`, and `audit_logs` tables automatically. Production does not seed login users. Create production users manually with private credentials before expecting login to work.
+
+After creating a production user, verify login with that private username and password:
+
+```bash
+curl -s -X POST https://<your-railway-domain>/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"<your-production-username>","password":"<your-production-password>"}'
+```
 
 ### Frontend on Vercel
 
@@ -267,10 +351,11 @@ The first boot runs Flyway migrations and creates the `devices` table automatica
 ### Deployment Notes
 
 - Keep `.env` local. It is gitignored and Railway/Vercel do not read it.
-- Use different, strong production values for `APP_USERNAME` and `APP_PASSWORD`.
+- Use a long, random `JWT_SECRET` in production. Do not reuse the local example value.
 - Do not use Railway's `DATABASE_PUBLIC_URL` for the deployed backend. Use the private `PG*` variables.
 - `APP_CORS_ALLOWED_ORIGINS` accepts comma-separated origin patterns (exact URLs or patterns containing `*` wildcards). Add your production Vercel URL, plus a wildcard pattern if you want preview deployments to work.
-- HTTPS is required because Basic Auth sends credentials with every request. Railway and Vercel provide HTTPS by default.
+- HTTPS is required for production deployments. Railway and Vercel provide HTTPS by default.
+- The frontend stores JWTs in `sessionStorage` for this portfolio SPA. That is acceptable for a demo, but httpOnly cookies are a stronger choice for high-risk production apps.
 - Swagger and OpenAPI are disabled outside the `dev` profile.
 - Database schema is managed by Flyway in `src/main/resources/db/migration`.
 - Never set `spring.jpa.hibernate.ddl-auto` to `update` or `create` in production. The `prod` profile uses `validate` so Hibernate checks the Flyway-managed schema.
@@ -278,8 +363,7 @@ The first boot runs Flyway migrations and creates the `devices` table automatica
 ## Roadmap
 
 - Polish the frontend dashboard
-- Add dashboard summary metrics
+- Add backend dashboard summary metrics
 - Add security event tracking
 - Add alert severity filtering
-- Add audit logs
-- Replace Basic Auth with JWT or another production-grade auth flow if the app grows
+- Add admin user management for production accounts

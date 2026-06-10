@@ -8,6 +8,7 @@ import com.nextking12.physical_security_dashboard.entity.DeviceType;
 import com.nextking12.physical_security_dashboard.service.DeviceService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,8 +23,9 @@ public class DeviceController {
 		this.deviceService = deviceService;
 	}
 
-    @GetMapping
-    public List<DeviceResponse> getAllDevices(
+	@GetMapping
+	@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+	public List<DeviceResponse> getAllDevices(
             @RequestParam(required = false) DeviceStatus status,
             @RequestParam(required = false) DeviceType type,
             @RequestParam(required = false) String location
@@ -33,22 +35,26 @@ public class DeviceController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
+	@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
 	public DeviceResponse createDevice(@Valid @RequestBody CreateDeviceRequest request) {
 		return deviceService.create(request);
 	}
 
-    @GetMapping("/{id}")
-    public DeviceResponse getDevice(@PathVariable Long id) {
+	@GetMapping("/{id}")
+	@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+	public DeviceResponse getDevice(@PathVariable Long id) {
         return deviceService.findById(id);
     }
-    @PutMapping("/{id}")
-    public DeviceResponse updateDevice(@PathVariable Long id,
+	@PutMapping("/{id}")
+	@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+	public DeviceResponse updateDevice(@PathVariable Long id,
                                        @Valid @RequestBody UpdateDeviceRequest request) {
         return deviceService.update(id, request);
     }
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteDevice(@PathVariable Long id) {
+	@DeleteMapping("/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("hasRole('ADMIN')")
+	public void deleteDevice(@PathVariable Long id) {
         deviceService.delete(id);
     }
 }

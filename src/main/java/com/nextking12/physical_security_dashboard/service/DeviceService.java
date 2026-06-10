@@ -3,6 +3,7 @@ package com.nextking12.physical_security_dashboard.service;
 import com.nextking12.physical_security_dashboard.dto.CreateDeviceRequest;
 import com.nextking12.physical_security_dashboard.dto.DeviceResponse;
 import com.nextking12.physical_security_dashboard.dto.UpdateDeviceRequest;
+import com.nextking12.physical_security_dashboard.entity.AuditAction;
 import com.nextking12.physical_security_dashboard.entity.Device;
 import com.nextking12.physical_security_dashboard.entity.DeviceStatus;
 import com.nextking12.physical_security_dashboard.entity.DeviceType;
@@ -18,9 +19,11 @@ import jakarta.persistence.criteria.Predicate;
 public class DeviceService {
 
 	private final DeviceRepository deviceRepository;
+	private final AuditService auditService;
 
-	public DeviceService(DeviceRepository deviceRepository) {
+	public DeviceService(DeviceRepository deviceRepository, AuditService auditService) {
 		this.deviceRepository = deviceRepository;
+		this.auditService = auditService;
 	}
 
     public List<DeviceResponse> findAll(DeviceStatus status, DeviceType type, String location) {
@@ -62,7 +65,9 @@ public class DeviceService {
         device.setIpAddress(request.ipAddress());
         device.setModel(request.model());
 
-		return DeviceResponse.from(deviceRepository.save(device));
+		Device saved = deviceRepository.save(device);
+		auditService.logDeviceAction(AuditAction.CREATE, saved);
+		return DeviceResponse.from(saved);
 	}
 
     public DeviceResponse findById(Long id) {
@@ -84,13 +89,17 @@ public class DeviceService {
         device.setIpAddress(request.ipAddress());
         device.setModel(request.model());
 
-        return DeviceResponse.from(deviceRepository.save(device));
+        Device saved = deviceRepository.save(device);
+        auditService.logDeviceAction(AuditAction.UPDATE, saved);
+        return DeviceResponse.from(saved);
     }
+
     public void delete(Long id) {
-        if (!deviceRepository.existsById(id)) {
-            throw new ResourceNotFoundException(
-                    "Device not found with id: " + id);
-        }
+        Device device = deviceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Device not found with id: " + id));
+
+        auditService.logDeviceDelete(device.getId(), device.getName());
         deviceRepository.deleteById(id);
     }
 }

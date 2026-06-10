@@ -1,15 +1,17 @@
 package com.nextking12.physical_security_dashboard.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.nextking12.physical_security_dashboard.auth.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -18,26 +20,19 @@ import java.util.Arrays;
 import java.util.List;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
-	@Value("${spring.security.user.name}")
-	private String username;
-
-	@Value("${spring.security.user.password}")
-	private String password;
-
 	@Bean
-	UserDetailsService userDetailsService() {
-		return new InMemoryUserDetailsManager(
-				User.withUsername(username)
-						.password("{noop}" + password)
-						.roles("USER")
-						.build()
-		);
+	PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
 	}
 
 	@Bean
-	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	SecurityFilterChain securityFilterChain(
+			HttpSecurity http,
+			JwtAuthenticationFilter jwtAuthenticationFilter
+	) throws Exception {
 		return http
 				.cors(cors -> {})
 				.csrf(csrf -> csrf.disable())
@@ -45,10 +40,14 @@ public class SecurityConfig {
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+						.requestMatchers("/api/auth/login").permitAll()
 						.anyRequest().authenticated())
-				.httpBasic(basic -> basic
+				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+				.exceptionHandling(ex -> ex
 						.authenticationEntryPoint((request, response, authException) ->
-								response.setStatus(HttpStatus.UNAUTHORIZED.value())))
+								response.setStatus(HttpStatus.UNAUTHORIZED.value()))
+						.accessDeniedHandler((request, response, accessDeniedException) ->
+								response.setStatus(HttpStatus.FORBIDDEN.value())))
 				.build();
 	}
 

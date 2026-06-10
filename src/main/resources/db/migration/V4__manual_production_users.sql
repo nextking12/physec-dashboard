@@ -1,0 +1,2 @@
+-- Production users are created manually with private credentials.
+-- Tests create their own users in the test setup.
