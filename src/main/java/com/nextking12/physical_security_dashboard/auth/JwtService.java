@@ -1,6 +1,7 @@
 package com.nextking12.physical_security_dashboard.auth;
 
 import com.nextking12.physical_security_dashboard.entity.User;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +37,19 @@ public class JwtService {
 				.expiration(Date.from(expiry))
 				.signWith(secretKey)
 				.compact();
+	}
+
+	public JwtUserClaims parseToken(String token) {
+		Claims claims = Jwts.parser()
+				.verifyWith(secretKey)
+				.build()
+				.parseSignedClaims(token)
+				.getPayload();
+
+		return new JwtUserClaims(
+				claims.getSubject(),
+				claims.get("role", String.class)
+		);
 	}
 
 	public long getExpirationMs() {
