@@ -143,6 +143,8 @@ Bearer <accessToken>
 
 ### Login
 
+Local dev example using the seeded `admin` user:
+
 ```http
 POST /api/auth/login
 Content-Type: application/json
