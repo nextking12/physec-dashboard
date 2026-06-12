@@ -139,6 +139,56 @@ button {
   border-color: #27272a;
 }
 
+.login-divider {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 20px 0;
+  color: #71717a;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.login-divider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.login-divider span {
+  position: relative;
+  padding: 0 10px;
+  background: #ffffff;
+}
+
+.demo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #d4d4d8;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #050505;
+  font-weight: 800;
+}
+
+.demo-button:hover {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+.demo-note {
+  margin: 10px 0 0;
+  color: #71717a;
+  font-size: 0.86rem;
+}
+
 .login-form,
 .device-form {
   display: grid;
@@ -240,6 +290,19 @@ select:focus {
   font-weight: 800;
 }
 
+.demo-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(45, 212, 191, 0.42);
+  background: var(--accent-muted);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .top-actions,
 .row-actions,
 .drawer-actions {
@@ -305,6 +368,19 @@ select:focus {
 
 .error-banner.compact {
   margin-bottom: 0;
+}
+
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(45, 212, 191, 0.38);
+  background: var(--accent-muted);
+  color: #b7f7ed;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-weight: 800;
 }
 
 .metrics-grid {

@@ -23,6 +23,69 @@ const DEVICE_STATUSES = ["ONLINE", "OFFLINE", "MAINTENANCE", "ALERTING"];
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const SESSION_STORAGE_KEY = "psd.session";
 
+const DEMO_DEVICES = [
+  {
+    id: "demo-1",
+    name: "Front entrance camera",
+    type: "CAMERA",
+    location: "Main Lobby",
+    status: "ONLINE",
+    model: "P3265-LV",
+    macAddress: "00:1A:2B:3C:4D:5E",
+    ipAddress: "10.20.1.12",
+    manufacturer: "Axis",
+    createdAt: "2026-06-01T14:25:00Z"
+  },
+  {
+    id: "demo-2",
+    name: "Rear door card reader",
+    type: "CARD_READER",
+    location: "Rear Entrance",
+    status: "OFFLINE",
+    model: "RPK40",
+    macAddress: "00:1A:2B:3C:4D:61",
+    ipAddress: "10.20.2.8",
+    manufacturer: "HID",
+    createdAt: "2026-06-02T16:40:00Z"
+  },
+  {
+    id: "demo-3",
+    name: "East wing alarm panel",
+    type: "ALARM_PANEL",
+    location: "East Wing",
+    status: "MAINTENANCE",
+    model: "Vista-128BPT",
+    macAddress: "00:1A:2B:3C:4D:72",
+    ipAddress: "10.20.3.4",
+    manufacturer: "Honeywell",
+    createdAt: "2026-06-03T19:05:00Z"
+  },
+  {
+    id: "demo-4",
+    name: "Lobby motion sensor",
+    type: "MOTION_SENSOR",
+    location: "Main Lobby",
+    status: "ONLINE",
+    model: "ISC-BPR2",
+    macAddress: "00:1A:2B:3C:4D:83",
+    ipAddress: "10.20.1.28",
+    manufacturer: "Bosch",
+    createdAt: "2026-06-05T11:30:00Z"
+  },
+  {
+    id: "demo-5",
+    name: "Server room camera",
+    type: "CAMERA",
+    location: "Server Room",
+    status: "ALERTING",
+    model: "Q3538-LVE",
+    macAddress: "00:1A:2B:3C:4D:94",
+    ipAddress: "10.20.4.15",
+    manufacturer: "Axis",
+    createdAt: "2026-06-06T21:15:00Z"
+  }
+];
+
 const EMPTY_FORM = {
   name: "",
   type: "CAMERA",
@@ -107,6 +170,7 @@ export default function App() {
   const canModify = session?.role === "ADMIN" || session?.role === "OPERATOR";
   const canDelete = session?.role === "ADMIN";
   const isAdmin = session?.role === "ADMIN";
+  const isDemo = !!session?.isDemo;
 
   const metrics = useMemo(() => {
     return DEVICE_STATUSES.map((status) => ({
@@ -193,6 +257,21 @@ export default function App() {
     setError("");
 
     try {
+      if (isDemo) {
+        const locationFilter = filters.location.trim().toLowerCase();
+        const demoData = DEMO_DEVICES.filter((device) => {
+          const matchesStatus = !filters.status || device.status === filters.status;
+          const matchesType = !filters.type || device.type === filters.type;
+          const matchesLocation =
+            !locationFilter || device.location.toLowerCase().includes(locationFilter);
+
+          return matchesStatus && matchesType && matchesLocation;
+        });
+
+        setDevices(demoData);
+        return;
+      }
+
       const params = new URLSearchParams();
       if (filters.status) params.set("status", filters.status);
       if (filters.type) params.set("type", filters.type);
@@ -244,6 +323,21 @@ export default function App() {
       loadAuditLogs();
     }
   }, [session, isRestoringSession, activeTab, filters.status, filters.type]);
+
+  function startDemo() {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    setLoginError("");
+    setError("");
+    setFilters({ status: "", type: "", location: "" });
+    setAuditLogs([]);
+    setActiveTab("devices");
+    setSession({
+      username: "demo_viewer",
+      role: "VIEWER",
+      isDemo: true
+    });
+    setDevices(DEMO_DEVICES);
+  }
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -395,6 +489,16 @@ export default function App() {
               {isLoggingIn ? "Signing in..." : "Sign In"}
             </button>
           </form>
+
+          <div className="login-divider">
+            <span>or</span>
+          </div>
+
+          <button type="button" className="demo-button" onClick={startDemo}>
+            <Activity size={18} />
+            Try Read-Only Demo
+          </button>
+          <p className="demo-note">Explore sample devices without credentials or production data.</p>
         </section>
       </main>
     );
@@ -408,6 +512,7 @@ export default function App() {
           <h1>{activeTab === "devices" ? "Device Dashboard" : "Audit Log"}</h1>
         </div>
         <div className="top-actions">
+          {isDemo && <span className="demo-badge">Demo Mode</span>}
           <span className="role-badge">{roleLabels[session.role] || session.role}</span>
           <button
             type="button"
@@ -444,6 +549,13 @@ export default function App() {
           </button>
         )}
       </nav>
+
+      {isDemo && (
+        <div className="demo-banner">
+          <Activity size={18} />
+          You are viewing read-only sample data. Sign out to return to the real login screen.
+        </div>
+      )}
 
       {error && (
         <div className="error-banner">
