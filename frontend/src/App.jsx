@@ -501,8 +501,8 @@ export default function App() {
   if (isRestoringSession) {
     return (
       <main className="login-shell">
-        <section className="login-panel">
-          <h1>Restoring session...</h1>
+        <section className="login-frame restoring">
+          <h1>RESTORING SESSION</h1>
         </section>
       </main>
     );
@@ -511,56 +511,95 @@ export default function App() {
   if (!session) {
     return (
       <main className="login-shell">
-        <section className="login-panel">
-          <div className="login-header">
-            <div className="brand-mark">
-              <Shield size={24} />
+        <section className="login-frame">
+          <header className="login-nav">
+            <div className="login-brand">
+              <span className="brand-mark">
+                <Shield size={18} />
+              </span>
+              <span>PHYSEC.DASH</span>
             </div>
-            <span>Security Operations</span>
-          </div>
-          <h1>Welcome back</h1>
-          <p>Sign in to continue to the Physical Security Dashboard.</p>
-
-          <form onSubmit={handleLogin} className="login-form">
-            {loginError && (
-              <div className="error-banner compact">
-                <AlertTriangle size={18} />
-                {loginError}
-              </div>
-            )}
-            <label>
-              Username
-              <input
-                autoFocus
-                value={loginForm.username}
-                onChange={(event) => setLoginForm({ ...loginForm, username: event.target.value })}
-                required
-              />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                value={loginForm.password}
-                onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })}
-                required
-              />
-            </label>
-            <button type="submit" className="primary-button" disabled={isLoggingIn}>
-              <Shield size={18} />
-              {isLoggingIn ? "Signing in..." : "Sign In"}
+            <div className="login-nav-links" aria-hidden="true">
+              <span>DEVICES</span>
+              <span>ROLES</span>
+              <span>AUDIT</span>
+            </div>
+            <button type="button" className="login-demo-link" onClick={startDemo}>
+              DEMO
             </button>
-          </form>
+          </header>
 
-          <div className="login-divider">
-            <span>or</span>
+          <div className="login-hero">
+            <h1>PhySec.Dash</h1>
+            <p className="login-copy">
+              A portfolio dashboard for physical security devices, role-based access, and operational audit review.
+            </p>
           </div>
 
-          <button type="button" className="demo-button" onClick={startDemo}>
-            <Activity size={18} />
-            Try Interactive Demo
-          </button>
-          <p className="demo-note">Explore sample devices and audit logs without credentials or production data.</p>
+          <div className="access-grid">
+            <div className="access-node" aria-hidden="true">
+              <span>VIEW</span>
+              <span>FILTER</span>
+              <span>RESPOND</span>
+            </div>
+
+            <section className="login-panel" aria-label="Dashboard access">
+              <div className="login-header">
+                <div>
+                  <p className="panel-kicker">ACCESS NODE</p>
+                  <h2>Sign In</h2>
+                </div>
+                <span>JWT</span>
+              </div>
+
+              <form onSubmit={handleLogin} className="login-form">
+                {loginError && (
+                  <div className="error-banner compact">
+                    <AlertTriangle size={18} />
+                    {loginError}
+                  </div>
+                )}
+                <label>
+                  Username
+                  <input
+                    autoFocus
+                    value={loginForm.username}
+                    onChange={(event) => setLoginForm({ ...loginForm, username: event.target.value })}
+                    required
+                  />
+                </label>
+                <label>
+                  Password
+                  <input
+                    type="password"
+                    value={loginForm.password}
+                    onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })}
+                    required
+                  />
+                </label>
+                <button type="submit" className="primary-button" disabled={isLoggingIn}>
+                  <Shield size={18} />
+                  {isLoggingIn ? "Signing in..." : "Sign In"}
+                </button>
+              </form>
+
+              <div className="login-divider">
+                <span>OR</span>
+              </div>
+
+              <button type="button" className="demo-button" onClick={startDemo}>
+                <Activity size={18} />
+                Try Interactive Demo
+              </button>
+              <p className="demo-note">Sample devices and audit logs. No credentials required.</p>
+            </section>
+
+            <div className="access-node right" aria-hidden="true">
+              <span>AUTH</span>
+              <span>TRACE</span>
+              <span>REPORT</span>
+            </div>
+          </div>
         </section>
       </main>
     );
