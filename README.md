@@ -8,7 +8,7 @@ This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQ
 
 The deployed app is linked in the repository About section.
 
-Use **Try Read-Only Demo** on the sign-in screen to explore sample device data without credentials.
+Use **Try Interactive Demo** on the sign-in screen to explore sample device data and audit logs without credentials.
 
 ## Tech Stack
 

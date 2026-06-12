@@ -86,6 +86,45 @@ const DEMO_DEVICES = [
   }
 ];
 
+const DEMO_AUDIT_LOGS = [
+  {
+    id: "audit-demo-1",
+    username: "operator_demo",
+    action: "UPDATE",
+    entityType: "DEVICE",
+    entityId: "demo-2",
+    details: "name=Rear door card reader",
+    occurredAt: "2026-06-07T15:18:00Z"
+  },
+  {
+    id: "audit-demo-2",
+    username: "admin_demo",
+    action: "CREATE",
+    entityType: "DEVICE",
+    entityId: "demo-5",
+    details: "name=Server room camera",
+    occurredAt: "2026-06-06T21:15:00Z"
+  },
+  {
+    id: "audit-demo-3",
+    username: "operator_demo",
+    action: "UPDATE",
+    entityType: "DEVICE",
+    entityId: "demo-3",
+    details: "name=East wing alarm panel",
+    occurredAt: "2026-06-05T13:42:00Z"
+  },
+  {
+    id: "audit-demo-4",
+    username: "admin_demo",
+    action: "DELETE",
+    entityType: "DEVICE",
+    entityId: "demo-legacy-1",
+    details: "name=Retired loading dock camera",
+    occurredAt: "2026-06-04T18:07:00Z"
+  }
+];
+
 const EMPTY_FORM = {
   name: "",
   type: "CAMERA",
@@ -168,10 +207,10 @@ export default function App() {
     return `Bearer ${session.accessToken}`;
   }, [session]);
 
-  const canModify = session?.role === "ADMIN" || session?.role === "OPERATOR";
-  const canDelete = session?.role === "ADMIN";
-  const isAdmin = session?.role === "ADMIN";
   const isDemo = !!session?.isDemo;
+  const canModify = !isDemo && (session?.role === "ADMIN" || session?.role === "OPERATOR");
+  const canDelete = !isDemo && session?.role === "ADMIN";
+  const isAdmin = session?.role === "ADMIN" || isDemo;
 
   const metrics = useMemo(() => {
     return DEVICE_STATUSES.map((status) => ({
@@ -298,6 +337,20 @@ export default function App() {
     setError("");
 
     try {
+      if (isDemo) {
+        const entityTypeFilter = auditFilters.entityType.trim().toLowerCase();
+        const demoData = DEMO_AUDIT_LOGS.filter((entry) => {
+          const matchesAction = !auditFilters.action || entry.action === auditFilters.action;
+          const matchesEntityType =
+            !entityTypeFilter || entry.entityType.toLowerCase().includes(entityTypeFilter);
+
+          return matchesAction && matchesEntityType;
+        });
+
+        setAuditLogs(demoData);
+        return;
+      }
+
       const params = new URLSearchParams();
       if (auditFilters.action) params.set("action", auditFilters.action);
       if (auditFilters.entityType.trim()) params.set("entityType", auditFilters.entityType.trim());
@@ -330,11 +383,12 @@ export default function App() {
     setLoginError("");
     setError("");
     setFilters({ status: "", type: "", location: "" });
-    setAuditLogs([]);
+    setAuditFilters({ action: "", entityType: "" });
+    setAuditLogs(DEMO_AUDIT_LOGS);
     setActiveTab("devices");
     setSession({
-      username: "demo_viewer",
-      role: "VIEWER",
+      username: "demo_admin",
+      role: "ADMIN",
       isDemo: true
     });
     setDevices(DEMO_DEVICES);
@@ -504,9 +558,9 @@ export default function App() {
 
           <button type="button" className="demo-button" onClick={startDemo}>
             <Activity size={18} />
-            Try Read-Only Demo
+            Try Interactive Demo
           </button>
-          <p className="demo-note">Explore sample devices without credentials or production data.</p>
+          <p className="demo-note">Explore sample devices and audit logs without credentials or production data.</p>
         </section>
       </main>
     );
@@ -521,7 +575,7 @@ export default function App() {
         </div>
         <div className="top-actions">
           {isDemo && <span className="demo-badge">Demo Mode</span>}
-          <span className="role-badge">{roleLabels[session.role] || session.role}</span>
+          <span className="role-badge">{isDemo ? "Demo Admin" : roleLabels[session.role] || session.role}</span>
           <button
             type="button"
             className="icon-button"
@@ -561,7 +615,7 @@ export default function App() {
       {isDemo && (
         <div className="demo-banner">
           <Activity size={18} />
-          You are viewing read-only sample data. Sign out to return to the real login screen.
+          You are viewing read-only sample data, including demo audit logs. Sign out to return to the real login screen.
         </div>
       )}
 
