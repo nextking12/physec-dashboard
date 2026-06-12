@@ -4,6 +4,12 @@ A full-stack physical security operations dashboard. The current version manages
 
 This project is built as a portfolio-ready app with a Spring Boot API, PostgreSQL persistence, Flyway migrations, JWT authentication, role-based access control, audit logging, integration tests, and a React dashboard frontend.
 
+## Live Demo
+
+The deployed app is linked in the repository About section.
+
+Use **Try Read-Only Demo** on the sign-in screen to explore sample device data without credentials.
+
 ## Tech Stack
 
 - Java 25
