@@ -160,6 +160,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState(null);
+  const [selectedDevice, setSelectedDevice] = useState(null);
   const [deviceForm, setDeviceForm] = useState(EMPTY_FORM);
 
   const authHeader = useMemo(() => {
@@ -377,12 +378,14 @@ export default function App() {
 
   function openCreatePanel() {
     setEditingDevice(null);
+    setSelectedDevice(null);
     setDeviceForm(EMPTY_FORM);
     setIsPanelOpen(true);
   }
 
   function openEditPanel(device) {
     setEditingDevice(device);
+    setSelectedDevice(null);
     setDeviceForm({
       name: device.name || "",
       type: device.type || "CAMERA",
@@ -394,6 +397,11 @@ export default function App() {
       manufacturer: device.manufacturer || ""
     });
     setIsPanelOpen(true);
+  }
+
+  function openDeviceDetails(device) {
+    if (canModify) return;
+    setSelectedDevice(device);
   }
 
   async function saveDevice(event) {
@@ -644,7 +652,11 @@ export default function App() {
                 </thead>
                 <tbody>
                   {devices.map((device) => (
-                    <tr key={device.id}>
+                    <tr
+                      key={device.id}
+                      className={!canModify ? "clickable-row" : ""}
+                      onClick={() => openDeviceDetails(device)}
+                    >
                       <td>
                         <div className="name-cell">
                           {typeIcon(device.type)}
@@ -866,7 +878,46 @@ export default function App() {
           </aside>
         </div>
       )}
+
+      {selectedDevice && !canModify && (
+        <div className="drawer-backdrop" role="presentation">
+          <aside className="drawer" aria-label="Device details">
+            <div className="drawer-header">
+              <div>
+                <p className="eyebrow">Device Details</p>
+                <h2>{selectedDevice.name}</h2>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setSelectedDevice(null)} title="Close details">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="details-grid">
+              <DetailItem label="Type" value={typeLabels[selectedDevice.type] || toTitle(selectedDevice.type)} />
+              <DetailItem
+                label="Status"
+                value={statusLabels[selectedDevice.status] || toTitle(selectedDevice.status)}
+              />
+              <DetailItem label="Location" value={selectedDevice.location} />
+              <DetailItem label="Model" value={selectedDevice.model || "Not recorded"} />
+              <DetailItem label="Manufacturer" value={selectedDevice.manufacturer || "Not recorded"} />
+              <DetailItem label="IP Address" value={selectedDevice.ipAddress || "Not recorded"} />
+              <DetailItem label="MAC Address" value={selectedDevice.macAddress || "Not recorded"} />
+              <DetailItem label="Created" value={formatTimestamp(selectedDevice.createdAt)} />
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
+  );
+}
+
+function DetailItem({ label, value }) {
+  return (
+    <div className="detail-item">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 

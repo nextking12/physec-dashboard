@@ -529,6 +529,14 @@ select:focus {
   letter-spacing: 0;
 }
 
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: rgba(45, 212, 191, 0.06);
+}
+
 .name-cell {
   display: flex;
   align-items: center;
@@ -617,6 +625,33 @@ select:focus {
 .drawer-actions {
   justify-content: flex-end;
   padding-top: 4px;
+}
+
+.details-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-item {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.detail-item span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.detail-item strong {
+  color: var(--text);
+  font-size: 0.98rem;
 }
 
 @media (max-width: 1050px) {
