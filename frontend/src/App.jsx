@@ -83,6 +83,66 @@ const DEMO_DEVICES = [
     ipAddress: "10.20.4.15",
     manufacturer: "Axis",
     createdAt: "2026-06-06T21:15:00Z"
+  },
+  {
+    id: "demo-6",
+    name: "Loading dock camera",
+    type: "CAMERA",
+    location: "Loading Dock",
+    status: "ONLINE",
+    model: "M3116-LVE",
+    macAddress: "00:1A:2B:3C:4D:A5",
+    ipAddress: "10.20.5.21",
+    manufacturer: "Axis",
+    createdAt: "2026-06-07T09:20:00Z"
+  },
+  {
+    id: "demo-7",
+    name: "Executive suite reader",
+    type: "CARD_READER",
+    location: "Executive Suite",
+    status: "ONLINE",
+    model: "Signo 40",
+    macAddress: "00:1A:2B:3C:4D:B6",
+    ipAddress: "10.20.2.31",
+    manufacturer: "HID",
+    createdAt: "2026-06-07T10:45:00Z"
+  },
+  {
+    id: "demo-8",
+    name: "Warehouse motion sensor",
+    type: "MOTION_SENSOR",
+    location: "Warehouse Aisle 4",
+    status: "OFFLINE",
+    model: "Blue Line Gen2",
+    macAddress: "00:1A:2B:3C:4D:C7",
+    ipAddress: "10.20.6.18",
+    manufacturer: "Bosch",
+    createdAt: "2026-06-08T12:10:00Z"
+  },
+  {
+    id: "demo-9",
+    name: "Parking gate reader",
+    type: "CARD_READER",
+    location: "Parking Gate",
+    status: "ALERTING",
+    model: "iCLASS SE R90",
+    macAddress: "00:1A:2B:3C:4D:D8",
+    ipAddress: "10.20.7.9",
+    manufacturer: "HID",
+    createdAt: "2026-06-08T17:55:00Z"
+  },
+  {
+    id: "demo-10",
+    name: "West wing alarm panel",
+    type: "ALARM_PANEL",
+    location: "West Wing",
+    status: "MAINTENANCE",
+    model: "Vista-250BPT",
+    macAddress: "00:1A:2B:3C:4D:E9",
+    ipAddress: "10.20.3.17",
+    manufacturer: "Honeywell",
+    createdAt: "2026-06-09T08:35:00Z"
   }
 ];
 
@@ -122,6 +182,60 @@ const DEMO_AUDIT_LOGS = [
     entityId: "demo-legacy-1",
     details: "name=Retired loading dock camera",
     occurredAt: "2026-06-04T18:07:00Z"
+  },
+  {
+    id: "audit-demo-5",
+    username: "operator_demo",
+    action: "CREATE",
+    entityType: "DEVICE",
+    entityId: "demo-6",
+    details: "name=Loading dock camera",
+    occurredAt: "2026-06-07T09:20:00Z"
+  },
+  {
+    id: "audit-demo-6",
+    username: "admin_demo",
+    action: "CREATE",
+    entityType: "DEVICE",
+    entityId: "demo-7",
+    details: "name=Executive suite reader",
+    occurredAt: "2026-06-07T10:45:00Z"
+  },
+  {
+    id: "audit-demo-7",
+    username: "operator_demo",
+    action: "UPDATE",
+    entityType: "DEVICE",
+    entityId: "demo-8",
+    details: "status=OFFLINE location=Warehouse Aisle 4",
+    occurredAt: "2026-06-08T12:24:00Z"
+  },
+  {
+    id: "audit-demo-8",
+    username: "admin_demo",
+    action: "UPDATE",
+    entityType: "DEVICE",
+    entityId: "demo-9",
+    details: "status=ALERTING name=Parking gate reader",
+    occurredAt: "2026-06-08T18:02:00Z"
+  },
+  {
+    id: "audit-demo-9",
+    username: "operator_demo",
+    action: "CREATE",
+    entityType: "DEVICE",
+    entityId: "demo-10",
+    details: "name=West wing alarm panel",
+    occurredAt: "2026-06-09T08:35:00Z"
+  },
+  {
+    id: "audit-demo-10",
+    username: "admin_demo",
+    action: "UPDATE",
+    entityType: "DEVICE",
+    entityId: "demo-1",
+    details: "firmware=validated network=10.20.1.12",
+    occurredAt: "2026-06-09T11:12:00Z"
   }
 ];
 
