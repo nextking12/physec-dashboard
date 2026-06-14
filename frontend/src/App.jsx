@@ -17,6 +17,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import { Analytics } from "@vercel/analytics/react";
 
 const DEVICE_TYPES = ["CAMERA", "CARD_READER", "ALARM_PANEL", "MOTION_SENSOR"];
 const DEVICE_STATUSES = ["ONLINE", "OFFLINE", "MAINTENANCE", "ALERTING"];
@@ -1115,6 +1116,7 @@ export default function App() {
           </aside>
         </div>
       )}
+      <Analytics />
     </main>
   );
 }
