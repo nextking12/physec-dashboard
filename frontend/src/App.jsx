@@ -1019,10 +1019,10 @@ export default function App() {
                 <tbody>
                   {auditLogs.map((entry) => (
                     <tr key={entry.id}>
-                      <td>{formatTimestamp(entry.occurredAt)}</td>
+                      <td className="mono-data">{formatTimestamp(entry.occurredAt)}</td>
                       <td>{entry.username}</td>
                       <td>{auditActionLabels[entry.action] || entry.action}</td>
-                      <td>
+                      <td className="mono-data">
                         {entry.entityType}
                         {entry.entityId ? ` #${entry.entityId}` : ""}
                       </td>
