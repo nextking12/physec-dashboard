@@ -307,6 +307,7 @@ export default function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activeTab, setActiveTab] = useState("devices");
   const [devices, setDevices] = useState([]);
+  const [allDevices, setAllDevices] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [filters, setFilters] = useState({ status: "", type: "", location: "" });
   const [auditFilters, setAuditFilters] = useState({ action: "", entityType: "" });
@@ -327,13 +328,33 @@ export default function App() {
   const canDelete = !isDemo && session?.role === "ADMIN";
   const isAdmin = session?.role === "ADMIN" || isDemo;
 
+  const metricBaseDevices = useMemo(() => {
+    const source = isDemo ? DEMO_DEVICES : allDevices;
+    const locationFilter = filters.location.trim().toLowerCase();
+
+    return source.filter((device) => {
+      const matchesType = !filters.type || device.type === filters.type;
+      const matchesLocation =
+        !locationFilter || device.location.toLowerCase().includes(locationFilter);
+
+      return matchesType && matchesLocation;
+    });
+  }, [isDemo, allDevices, filters.type, filters.location]);
+
   const metrics = useMemo(() => {
     return DEVICE_STATUSES.map((status) => ({
       status,
       label: statusLabels[status],
-      count: devices.filter((device) => device.status === status).length
+      count: metricBaseDevices.filter((device) => device.status === status).length
     }));
-  }, [devices]);
+  }, [metricBaseDevices]);
+
+  function handleMetricClick(status) {
+    setFilters((current) => ({
+      ...current,
+      status: status === "" ? "" : current.status === status ? "" : status
+    }));
+  }
 
   async function apiRequest(path, options = {}, authOverride = authHeader) {
     const response = await fetch(apiUrl(path), {
@@ -374,6 +395,7 @@ export default function App() {
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
     setSession(null);
     setDevices([]);
+    setAllDevices([]);
     setAuditLogs([]);
     setActiveTab("devices");
   }
@@ -435,6 +457,9 @@ export default function App() {
       const query = params.toString();
       const data = await apiRequest(`/api/devices${query ? `?${query}` : ""}`);
       setDevices(data);
+      if (!filters.status) {
+        setAllDevices(data);
+      }
     } catch (err) {
       setError(err.message);
       if (err.message.includes("Session expired")) {
@@ -783,9 +808,24 @@ export default function App() {
       {activeTab === "devices" && (
         <>
           <section className="metrics-grid">
-            <MetricCard icon={<Activity size={20} />} label="Total Devices" value={devices.length} />
+            <MetricCard
+              icon={<Activity size={20} />}
+              label="Total Devices"
+              value={metricBaseDevices.length}
+              active={!filters.status}
+              onClick={() => handleMetricClick("")}
+              title="Show all devices"
+            />
             {metrics.map((metric) => (
-              <MetricCard key={metric.status} label={metric.label} value={metric.count} status={metric.status} />
+              <MetricCard
+                key={metric.status}
+                label={metric.label}
+                value={metric.count}
+                status={metric.status}
+                active={filters.status === metric.status}
+                onClick={() => handleMetricClick(metric.status)}
+                title={`Filter by ${metric.label}`}
+              />
             ))}
           </section>
 
@@ -1130,9 +1170,26 @@ function DetailItem({ label, value }) {
   );
 }
 
-function MetricCard({ icon, label, value, status }) {
+function MetricCard({ icon, label, value, status, active, onClick, title }) {
   return (
-    <article className="metric-card">
+    <article
+      className={`metric-card${onClick ? " clickable" : ""}${active ? " active" : ""}`}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-pressed={onClick ? active : undefined}
+      title={title}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
       <div className={`metric-icon ${status ? status.toLowerCase() : ""}`}>
         {icon || <CheckCircle2 size={20} />}
       </div>
