@@ -410,6 +410,17 @@ export default function App() {
     const parsed = JSON.parse(saved);
 
     async function restoreSession() {
+      if (parsed.isDemo) {
+        persistSession({
+          username: parsed.username || "demo_admin",
+          role: parsed.role || "ADMIN",
+          isDemo: true
+        });
+        setAuditLogs(DEMO_AUDIT_LOGS);
+        setIsRestoringSession(false);
+        return;
+      }
+
       try {
         const me = await apiRequest("/api/auth/me", {}, `Bearer ${parsed.accessToken}`);
         persistSession({
@@ -519,14 +530,13 @@ export default function App() {
   }, [session, isRestoringSession, activeTab, filters.status, filters.type]);
 
   function startDemo() {
-    sessionStorage.removeItem(SESSION_STORAGE_KEY);
     setLoginError("");
     setError("");
     setFilters({ status: "", type: "", location: "" });
     setAuditFilters({ action: "", entityType: "" });
     setAuditLogs(DEMO_AUDIT_LOGS);
     setActiveTab("devices");
-    setSession({
+    persistSession({
       username: "demo_admin",
       role: "ADMIN",
       isDemo: true
