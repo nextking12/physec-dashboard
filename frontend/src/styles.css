@@ -93,7 +93,7 @@ button {
 
 .login-nav {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto minmax(100px, 1fr);
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 20px;
   min-height: 56px;
@@ -111,14 +111,6 @@ button {
   font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-}
-
-.login-nav-links {
-  display: flex;
-  gap: clamp(18px, 4vw, 44px);
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 600;
 }
 
 .login-demo-link {
@@ -221,26 +213,7 @@ button {
 }
 
 .login-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   margin-bottom: 22px;
-}
-
-.login-header span {
-  display: inline-flex;
-  min-height: 28px;
-  align-items: center;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-full);
-  color: var(--muted);
-  background: transparent;
-  padding: 0 11px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .brand-mark {
@@ -926,10 +899,6 @@ select:focus {
 @media (max-width: 1050px) {
   .login-nav {
     grid-template-columns: 1fr auto;
-  }
-
-  .login-nav-links {
-    display: none;
   }
 
   .access-grid {
