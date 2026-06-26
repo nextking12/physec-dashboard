@@ -669,11 +669,6 @@ export default function App() {
               </span>
               <span>PHYSEC.DASH</span>
             </div>
-            <div className="login-nav-links" aria-hidden="true">
-              <span>DEVICES</span>
-              <span>ROLES</span>
-              <span>AUDIT</span>
-            </div>
             <button type="button" className="login-demo-link" onClick={startDemo}>
               DEMO
             </button>
@@ -699,7 +694,6 @@ export default function App() {
                   <p className="panel-kicker">ACCESS NODE</p>
                   <h2>Sign In</h2>
                 </div>
-                <span>JWT</span>
               </div>
 
               <form onSubmit={handleLogin} className="login-form">
