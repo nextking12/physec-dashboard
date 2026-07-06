@@ -23,6 +23,9 @@ const DEVICE_TYPES = ["CAMERA", "CARD_READER", "ALARM_PANEL", "MOTION_SENSOR"];
 const DEVICE_STATUSES = ["ONLINE", "OFFLINE", "MAINTENANCE", "ALERTING"];
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const SESSION_STORAGE_KEY = "psd.session";
+const DEMO_STORAGE_KEY = "psd.demo.store.v1";
+const DEMO_SETTINGS_KEY = "psd.demo.settings.v1";
+const DEMO_LATENCY_MS = 220;
 
 const DEMO_DEVICES = [
   {
@@ -277,6 +280,339 @@ const auditActionLabels = {
   DELETE: "Deleted"
 };
 
+const DEMO_FAULT_MODES = [
+  { value: "NONE", label: "None" },
+  { value: "401", label: "401 Unauthorized" },
+  { value: "403", label: "403 Forbidden" },
+  { value: "404", label: "404 Not Found" },
+  { value: "500", label: "500 Server Error" }
+];
+
+function cloneDemoSeed() {
+  return {
+    devices: DEMO_DEVICES.map((device) => ({ ...device })),
+    auditLogs: DEMO_AUDIT_LOGS.map((entry) => ({ ...entry })),
+    lastDeviceId: DEMO_DEVICES.reduce((max, device) => {
+      const value = Number.parseInt(String(device.id).replace("demo-", ""), 10);
+      return Number.isNaN(value) ? max : Math.max(max, value);
+    }, 0),
+    lastAuditId: DEMO_AUDIT_LOGS.reduce((max, entry) => {
+      const value = Number.parseInt(String(entry.id).replace("audit-demo-", ""), 10);
+      return Number.isNaN(value) ? max : Math.max(max, value);
+    }, 0)
+  };
+}
+
+function readDemoStore() {
+  const raw = localStorage.getItem(DEMO_STORAGE_KEY);
+  if (!raw) {
+    const seeded = cloneDemoSeed();
+    localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(seeded));
+    return seeded;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed.devices) || !Array.isArray(parsed.auditLogs)) {
+      throw new Error("Invalid demo data");
+    }
+
+    return {
+      devices: parsed.devices,
+      auditLogs: parsed.auditLogs,
+      lastDeviceId:
+        typeof parsed.lastDeviceId === "number"
+          ? parsed.lastDeviceId
+          : parsed.devices.reduce((max, device) => {
+              const value = Number.parseInt(String(device.id).replace("demo-", ""), 10);
+              return Number.isNaN(value) ? max : Math.max(max, value);
+            }, 0),
+      lastAuditId:
+        typeof parsed.lastAuditId === "number"
+          ? parsed.lastAuditId
+          : parsed.auditLogs.reduce((max, entry) => {
+              const value = Number.parseInt(String(entry.id).replace("audit-demo-", ""), 10);
+              return Number.isNaN(value) ? max : Math.max(max, value);
+            }, 0)
+    };
+  } catch {
+    const seeded = cloneDemoSeed();
+    localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(seeded));
+    return seeded;
+  }
+}
+
+function writeDemoStore(store) {
+  localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(store));
+}
+
+function resetDemoStore() {
+  const seeded = cloneDemoSeed();
+  writeDemoStore(seeded);
+  return seeded;
+}
+
+function readDemoSettings() {
+  const raw = localStorage.getItem(DEMO_SETTINGS_KEY);
+  if (!raw) {
+    return { faultMode: "NONE" };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const isValidMode = DEMO_FAULT_MODES.some((mode) => mode.value === parsed.faultMode);
+    return {
+      faultMode: isValidMode ? parsed.faultMode : "NONE"
+    };
+  } catch {
+    return { faultMode: "NONE" };
+  }
+}
+
+function writeDemoSettings(settings) {
+  localStorage.setItem(DEMO_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function applyDeviceFilters(devices, filters) {
+  const locationFilter = filters.location.trim().toLowerCase();
+
+  return devices.filter((device) => {
+    const matchesStatus = !filters.status || device.status === filters.status;
+    const matchesType = !filters.type || device.type === filters.type;
+    const matchesLocation = !locationFilter || device.location.toLowerCase().includes(locationFilter);
+    return matchesStatus && matchesType && matchesLocation;
+  });
+}
+
+function applyAuditFilters(auditLogs, filters) {
+  const entityTypeFilter = filters.entityType.trim().toLowerCase();
+
+  return auditLogs.filter((entry) => {
+    const matchesAction = !filters.action || entry.action === filters.action;
+    const matchesEntityType = !entityTypeFilter || entry.entityType.toLowerCase().includes(entityTypeFilter);
+    return matchesAction && matchesEntityType;
+  });
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function normalizeRequired(value, fieldLabel) {
+  const trimmed = (value || "").trim();
+  if (!trimmed) {
+    throw new Error(`${fieldLabel} is required.`);
+  }
+  return trimmed;
+}
+
+function normalizeOptional(value) {
+  const trimmed = (value || "").trim();
+  return trimmed || null;
+}
+
+function normalizeDeviceForm(payload) {
+  const name = normalizeRequired(payload.name, "Name");
+  const location = normalizeRequired(payload.location, "Location");
+
+  if (!DEVICE_TYPES.includes(payload.type)) {
+    throw new Error("Type is invalid.");
+  }
+
+  if (!DEVICE_STATUSES.includes(payload.status)) {
+    throw new Error("Status is invalid.");
+  }
+
+  return {
+    name,
+    type: payload.type,
+    location,
+    status: payload.status,
+    model: normalizeOptional(payload.model),
+    macAddress: normalizeOptional(payload.macAddress),
+    ipAddress: normalizeOptional(payload.ipAddress),
+    manufacturer: normalizeOptional(payload.manufacturer)
+  };
+}
+
+function appendDemoAuditEntry(store, { username, action, entityId, details }) {
+  const nextId = store.lastAuditId + 1;
+  const entry = {
+    id: `audit-demo-${nextId}`,
+    username,
+    action,
+    entityType: "DEVICE",
+    entityId,
+    details,
+    occurredAt: new Date().toISOString()
+  };
+
+  return {
+    ...store,
+    lastAuditId: nextId,
+    auditLogs: [entry, ...store.auditLogs]
+  };
+}
+
+function maybeThrowDemoError(faultMode) {
+  switch (faultMode) {
+    case "NONE":
+      return;
+    case "401":
+      throw new Error("Session expired. Please sign in again.");
+    case "403":
+      throw new Error("You do not have permission to perform this action.");
+    case "404":
+      throw new Error("Device not found with id: simulated");
+    case "500":
+      throw new Error("Request failed with status 500.");
+    default:
+      return;
+  }
+}
+
+function createApiClient(apiRequest) {
+  return {
+    async listDevices(filters) {
+      const params = new URLSearchParams();
+      if (filters.status) params.set("status", filters.status);
+      if (filters.type) params.set("type", filters.type);
+      if (filters.location.trim()) params.set("location", filters.location.trim());
+
+      const query = params.toString();
+      return apiRequest(`/api/devices${query ? `?${query}` : ""}`);
+    },
+    async listAuditLogs(filters) {
+      const params = new URLSearchParams();
+      if (filters.action) params.set("action", filters.action);
+      if (filters.entityType.trim()) params.set("entityType", filters.entityType.trim());
+
+      const query = params.toString();
+      return apiRequest(`/api/audit-logs${query ? `?${query}` : ""}`);
+    },
+    async createDevice(payload) {
+      return apiRequest("/api/devices", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+    },
+    async updateDevice(id, payload) {
+      return apiRequest(`/api/devices/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      });
+    },
+    async deleteDevice(id) {
+      return apiRequest(`/api/devices/${id}`, { method: "DELETE" });
+    }
+  };
+}
+
+function createDemoClient(username, faultMode) {
+  return {
+    async listDevices(filters) {
+      await wait(DEMO_LATENCY_MS);
+      maybeThrowDemoError(faultMode);
+      const store = readDemoStore();
+      return applyDeviceFilters(store.devices, filters);
+    },
+    async listAuditLogs(filters) {
+      await wait(DEMO_LATENCY_MS);
+      maybeThrowDemoError(faultMode);
+      const store = readDemoStore();
+      return applyAuditFilters(store.auditLogs, filters);
+    },
+    async createDevice(payload) {
+      await wait(DEMO_LATENCY_MS);
+      maybeThrowDemoError(faultMode);
+      const normalized = normalizeDeviceForm(payload);
+      const store = readDemoStore();
+      const nextId = store.lastDeviceId + 1;
+      const createdDevice = {
+        id: `demo-${nextId}`,
+        ...normalized,
+        createdAt: new Date().toISOString()
+      };
+
+      const updatedStore = appendDemoAuditEntry(
+        {
+          ...store,
+          lastDeviceId: nextId,
+          devices: [createdDevice, ...store.devices]
+        },
+        {
+          username,
+          action: "CREATE",
+          entityId: createdDevice.id,
+          details: `name=${createdDevice.name}`
+        }
+      );
+
+      writeDemoStore(updatedStore);
+      return createdDevice;
+    },
+    async updateDevice(id, payload) {
+      await wait(DEMO_LATENCY_MS);
+      maybeThrowDemoError(faultMode);
+      const normalized = normalizeDeviceForm(payload);
+      const store = readDemoStore();
+      const index = store.devices.findIndex((device) => String(device.id) === String(id));
+
+      if (index === -1) {
+        throw new Error(`Device not found with id: ${id}`);
+      }
+
+      const existing = store.devices[index];
+      const updatedDevice = {
+        ...existing,
+        ...normalized
+      };
+
+      const nextDevices = [...store.devices];
+      nextDevices[index] = updatedDevice;
+
+      const updatedStore = appendDemoAuditEntry(
+        {
+          ...store,
+          devices: nextDevices
+        },
+        {
+          username,
+          action: "UPDATE",
+          entityId: updatedDevice.id,
+          details: `name=${updatedDevice.name}`
+        }
+      );
+
+      writeDemoStore(updatedStore);
+      return updatedDevice;
+    },
+    async deleteDevice(id) {
+      await wait(DEMO_LATENCY_MS);
+      maybeThrowDemoError(faultMode);
+      const store = readDemoStore();
+      const index = store.devices.findIndex((device) => String(device.id) === String(id));
+
+      if (index === -1) {
+        throw new Error(`Device not found with id: ${id}`);
+      }
+
+      const [removed] = store.devices.splice(index, 1);
+      const updatedStore = appendDemoAuditEntry(store, {
+        username,
+        action: "DELETE",
+        entityId: removed.id,
+        details: `name=${removed.name}`
+      });
+
+      writeDemoStore(updatedStore);
+      return null;
+    }
+  };
+}
+
 function apiUrl(path) {
   return `${API_BASE_URL}${path}`;
 }
@@ -317,6 +653,7 @@ export default function App() {
   const [editingDevice, setEditingDevice] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [deviceForm, setDeviceForm] = useState(EMPTY_FORM);
+  const [demoSettings, setDemoSettings] = useState(() => readDemoSettings());
 
   const authHeader = useMemo(() => {
     if (!session?.accessToken) return null;
@@ -324,12 +661,13 @@ export default function App() {
   }, [session]);
 
   const isDemo = !!session?.isDemo;
-  const canModify = !isDemo && (session?.role === "ADMIN" || session?.role === "OPERATOR");
-  const canDelete = !isDemo && session?.role === "ADMIN";
-  const isAdmin = session?.role === "ADMIN" || isDemo;
+  const demoFaultMode = demoSettings.faultMode;
+  const canModify = session?.role === "ADMIN" || session?.role === "OPERATOR";
+  const canDelete = session?.role === "ADMIN";
+  const isAdmin = session?.role === "ADMIN";
 
   const metricBaseDevices = useMemo(() => {
-    const source = isDemo ? DEMO_DEVICES : allDevices;
+    const source = allDevices;
     const locationFilter = filters.location.trim().toLowerCase();
 
     return source.filter((device) => {
@@ -386,6 +724,14 @@ export default function App() {
     return response.json();
   }
 
+  function getDataClient() {
+    if (isDemo) {
+      return createDemoClient(session?.username || "demo_admin", demoFaultMode);
+    }
+
+    return createApiClient(apiRequest);
+  }
+
   function persistSession(nextSession) {
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
@@ -400,6 +746,28 @@ export default function App() {
     setActiveTab("devices");
   }
 
+  function switchDemoRole(nextRole) {
+    if (!isDemo || !session) return;
+
+    const nextSession = {
+      ...session,
+      role: nextRole,
+      username: `demo_${nextRole.toLowerCase()}`
+    };
+
+    persistSession(nextSession);
+    if (nextRole !== "ADMIN" && activeTab === "audit") {
+      setActiveTab("devices");
+    }
+  }
+
+  function updateDemoFaultMode(nextFaultMode) {
+    const nextSettings = { faultMode: nextFaultMode };
+    setDemoSettings(nextSettings);
+    writeDemoSettings(nextSettings);
+    setError("");
+  }
+
   useEffect(() => {
     const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!saved) {
@@ -411,12 +779,15 @@ export default function App() {
 
     async function restoreSession() {
       if (parsed.isDemo) {
+        const store = readDemoStore();
         persistSession({
           username: parsed.username || "demo_admin",
           role: parsed.role || "ADMIN",
           isDemo: true
         });
-        setAuditLogs(DEMO_AUDIT_LOGS);
+        setAllDevices(store.devices);
+        setDevices(applyDeviceFilters(store.devices, filters));
+        setAuditLogs(applyAuditFilters(store.auditLogs, auditFilters));
         setIsRestoringSession(false);
         return;
       }
@@ -445,31 +816,16 @@ export default function App() {
     setError("");
 
     try {
-      if (isDemo) {
-        const locationFilter = filters.location.trim().toLowerCase();
-        const demoData = DEMO_DEVICES.filter((device) => {
-          const matchesStatus = !filters.status || device.status === filters.status;
-          const matchesType = !filters.type || device.type === filters.type;
-          const matchesLocation =
-            !locationFilter || device.location.toLowerCase().includes(locationFilter);
+      const client = getDataClient();
 
-          return matchesStatus && matchesType && matchesLocation;
-        });
+      const filteredDevices = await client.listDevices(filters);
+      setDevices(filteredDevices);
 
-        setDevices(demoData);
-        return;
-      }
-
-      const params = new URLSearchParams();
-      if (filters.status) params.set("status", filters.status);
-      if (filters.type) params.set("type", filters.type);
-      if (filters.location.trim()) params.set("location", filters.location.trim());
-
-      const query = params.toString();
-      const data = await apiRequest(`/api/devices${query ? `?${query}` : ""}`);
-      setDevices(data);
-      if (!filters.status) {
-        setAllDevices(data);
+      if (filters.status) {
+        const metricsBaseDevices = await client.listDevices({ ...filters, status: "" });
+        setAllDevices(metricsBaseDevices);
+      } else {
+        setAllDevices(filteredDevices);
       }
     } catch (err) {
       setError(err.message);
@@ -488,26 +844,8 @@ export default function App() {
     setError("");
 
     try {
-      if (isDemo) {
-        const entityTypeFilter = auditFilters.entityType.trim().toLowerCase();
-        const demoData = DEMO_AUDIT_LOGS.filter((entry) => {
-          const matchesAction = !auditFilters.action || entry.action === auditFilters.action;
-          const matchesEntityType =
-            !entityTypeFilter || entry.entityType.toLowerCase().includes(entityTypeFilter);
-
-          return matchesAction && matchesEntityType;
-        });
-
-        setAuditLogs(demoData);
-        return;
-      }
-
-      const params = new URLSearchParams();
-      if (auditFilters.action) params.set("action", auditFilters.action);
-      if (auditFilters.entityType.trim()) params.set("entityType", auditFilters.entityType.trim());
-
-      const query = params.toString();
-      const data = await apiRequest(`/api/audit-logs${query ? `?${query}` : ""}`);
+      const client = getDataClient();
+      const data = await client.listAuditLogs(auditFilters);
       setAuditLogs(data);
     } catch (err) {
       setError(err.message);
@@ -529,19 +867,41 @@ export default function App() {
     }
   }, [session, isRestoringSession, activeTab, filters.status, filters.type]);
 
+  useEffect(() => {
+    if (activeTab === "audit" && !isAdmin) {
+      setActiveTab("devices");
+    }
+  }, [activeTab, isAdmin]);
+
   function startDemo() {
+    const store = readDemoStore();
+
     setLoginError("");
     setError("");
     setFilters({ status: "", type: "", location: "" });
     setAuditFilters({ action: "", entityType: "" });
-    setAuditLogs(DEMO_AUDIT_LOGS);
+    setAllDevices(store.devices);
+    setDevices(store.devices);
+    setAuditLogs(store.auditLogs);
     setActiveTab("devices");
     persistSession({
       username: "demo_admin",
       role: "ADMIN",
       isDemo: true
     });
-    setDevices(DEMO_DEVICES);
+  }
+
+  function resetDemoData() {
+    const confirmed = window.confirm("Reset demo data to default sample records?");
+    if (!confirmed) return;
+
+    const store = resetDemoStore();
+    setError("");
+    setFilters({ status: "", type: "", location: "" });
+    setAuditFilters({ action: "", entityType: "" });
+    setAllDevices(store.devices);
+    setDevices(store.devices);
+    setAuditLogs(store.auditLogs);
   }
 
   async function handleLogin(event) {
@@ -614,16 +974,19 @@ export default function App() {
     setError("");
 
     try {
-      const path = editingDevice ? `/api/devices/${editingDevice.id}` : "/api/devices";
-      const method = editingDevice ? "PUT" : "POST";
+      const client = getDataClient();
 
-      await apiRequest(path, {
-        method,
-        body: JSON.stringify(deviceForm)
-      });
+      if (editingDevice) {
+        await client.updateDevice(editingDevice.id, deviceForm);
+      } else {
+        await client.createDevice(deviceForm);
+      }
 
       setIsPanelOpen(false);
       await loadDevices();
+      if (isAdmin) {
+        await loadAuditLogs();
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -639,8 +1002,12 @@ export default function App() {
     setError("");
 
     try {
-      await apiRequest(`/api/devices/${device.id}`, { method: "DELETE" });
+      const client = getDataClient();
+      await client.deleteDevice(device.id);
       await loadDevices();
+      if (isAdmin) {
+        await loadAuditLogs();
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -758,7 +1125,7 @@ export default function App() {
         </div>
         <div className="top-actions">
           {isDemo && <span className="demo-badge">Demo Mode</span>}
-          <span className="role-badge">{isDemo ? "Demo Admin" : roleLabels[session.role] || session.role}</span>
+          <span className="role-badge">{isDemo ? `Demo ${roleLabels[session.role] || session.role}` : roleLabels[session.role] || session.role}</span>
           <button
             type="button"
             className="icon-button"
@@ -798,7 +1165,30 @@ export default function App() {
       {isDemo && (
         <div className="demo-banner">
           <Activity size={18} />
-          You are viewing read-only sample data, including demo audit logs. Sign out to return to the real login screen.
+          <span>Demo uses a local simulated backend with persistent CRUD and audit history.</span>
+          <div className="demo-controls">
+            <label className="demo-control">
+              Demo Role
+              <select value={session.role} onChange={(event) => switchDemoRole(event.target.value)}>
+                <option value="ADMIN">Admin</option>
+                <option value="OPERATOR">Operator</option>
+                <option value="VIEWER">Viewer</option>
+              </select>
+            </label>
+            <label className="demo-control">
+              Simulate API Error
+              <select value={demoFaultMode} onChange={(event) => updateDemoFaultMode(event.target.value)}>
+                {DEMO_FAULT_MODES.map((mode) => (
+                  <option key={mode.value} value={mode.value}>
+                    {mode.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="secondary-button" onClick={resetDemoData}>
+              Reset Demo Data
+            </button>
+          </div>
         </div>
       )}
 
