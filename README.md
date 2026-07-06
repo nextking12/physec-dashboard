@@ -10,6 +10,20 @@ The deployed app is linked in the repository About section.
 
 Use **Try Interactive Demo** on the sign-in screen to explore sample device data and audit logs without credentials.
 
+Production deployments should track `main` (full-stack backend + database).
+
+## Branches and Deploy Targets
+
+- `main`: production-oriented full-stack app (Spring Boot API, PostgreSQL, JWT auth, backend-enforced RBAC, persisted audit logs)
+- `feature/demo-persistent-crud`: portfolio simulation build (frontend-only local persistence with role-based UI behavior and resettable data)
+
+Recommended hosting split:
+
+- Vercel production domain -> `main`
+- Vercel preview deployments -> feature branches (including `feature/demo-persistent-crud`)
+
+This keeps the production architecture and the portfolio simulation experience separate by design.
+
 ## Tech Stack
 
 - Java 25
