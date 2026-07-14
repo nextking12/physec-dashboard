@@ -1,10 +1,6 @@
 spring:
   application:
     name: physical-security-dashboard
-  security:
-    user:
-      name: ${APP_USERNAME:admin}
-      password: ${APP_PASSWORD:dev-password}
   jpa:
     open-in-view: false
   datasource:

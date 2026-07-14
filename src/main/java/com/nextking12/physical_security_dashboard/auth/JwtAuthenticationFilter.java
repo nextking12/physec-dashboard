@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.JwtException;
 import java.io.IOException;
 import java.util.List;
 
@@ -42,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 						authorities
 				);
 				SecurityContextHolder.getContext().setAuthentication(authentication);
-			} catch (RuntimeException ex) {
+			} catch (JwtException ex) {
 				SecurityContextHolder.clearContext();
 			}
 		}

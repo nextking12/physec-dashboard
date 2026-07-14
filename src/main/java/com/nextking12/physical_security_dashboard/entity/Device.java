@@ -18,16 +18,21 @@ public class Device {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	@Column(nullable = false)
 	private String name;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
     private DeviceType type;
 
+	@Column(nullable = false)
 	private String location;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
     private DeviceStatus status;
 
+	@Column(nullable = false)
 	private Instant createdAt = Instant.now();
 
     private String model;
