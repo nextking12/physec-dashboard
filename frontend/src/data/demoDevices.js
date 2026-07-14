@@ -1,0 +1,122 @@
+export const DEMO_DEVICES = [
+  {
+    id: "demo-1",
+    name: "Front entrance camera",
+    type: "CAMERA",
+    location: "Main Lobby",
+    status: "ONLINE",
+    model: "P3265-LV",
+    macAddress: "00:1A:2B:3C:4D:5E",
+    ipAddress: "10.20.1.12",
+    manufacturer: "Axis",
+    createdAt: "2026-06-01T14:25:00Z"
+  },
+  {
+    id: "demo-2",
+    name: "Rear door card reader",
+    type: "CARD_READER",
+    location: "Rear Entrance",
+    status: "OFFLINE",
+    model: "RPK40",
+    macAddress: "00:1A:2B:3C:4D:61",
+    ipAddress: "10.20.2.8",
+    manufacturer: "HID",
+    createdAt: "2026-06-02T16:40:00Z"
+  },
+  {
+    id: "demo-3",
+    name: "East wing alarm panel",
+    type: "ALARM_PANEL",
+    location: "East Wing",
+    status: "MAINTENANCE",
+    model: "Vista-128BPT",
+    macAddress: "00:1A:2B:3C:4D:72",
+    ipAddress: "10.20.3.4",
+    manufacturer: "Honeywell",
+    createdAt: "2026-06-03T19:05:00Z"
+  },
+  {
+    id: "demo-4",
+    name: "Lobby motion sensor",
+    type: "MOTION_SENSOR",
+    location: "Main Lobby",
+    status: "ONLINE",
+    model: "ISC-BPR2",
+    macAddress: "00:1A:2B:3C:4D:83",
+    ipAddress: "10.20.1.28",
+    manufacturer: "Bosch",
+    createdAt: "2026-06-05T11:30:00Z"
+  },
+  {
+    id: "demo-5",
+    name: "Server room camera",
+    type: "CAMERA",
+    location: "Server Room",
+    status: "ALERTING",
+    model: "Q3538-LVE",
+    macAddress: "00:1A:2B:3C:4D:94",
+    ipAddress: "10.20.4.15",
+    manufacturer: "Axis",
+    createdAt: "2026-06-06T21:15:00Z"
+  },
+  {
+    id: "demo-6",
+    name: "Loading dock camera",
+    type: "CAMERA",
+    location: "Loading Dock",
+    status: "ONLINE",
+    model: "M3116-LVE",
+    macAddress: "00:1A:2B:3C:4D:A5",
+    ipAddress: "10.20.5.21",
+    manufacturer: "Axis",
+    createdAt: "2026-06-07T09:20:00Z"
+  },
+  {
+    id: "demo-7",
+    name: "Executive suite reader",
+    type: "CARD_READER",
+    location: "Executive Suite",
+    status: "ONLINE",
+    model: "Signo 40",
+    macAddress: "00:1A:2B:3C:4D:B6",
+    ipAddress: "10.20.2.31",
+    manufacturer: "HID",
+    createdAt: "2026-06-07T10:45:00Z"
+  },
+  {
+    id: "demo-8",
+    name: "Warehouse motion sensor",
+    type: "MOTION_SENSOR",
+    location: "Warehouse Aisle 4",
+    status: "OFFLINE",
+    model: "Blue Line Gen2",
+    macAddress: "00:1A:2B:3C:4D:C7",
+    ipAddress: "10.20.6.18",
+    manufacturer: "Bosch",
+    createdAt: "2026-06-08T12:10:00Z"
+  },
+  {
+    id: "demo-9",
+    name: "Parking gate reader",
+    type: "CARD_READER",
+    location: "Parking Gate",
+    status: "ALERTING",
+    model: "iCLASS SE R90",
+    macAddress: "00:1A:2B:3C:4D:D8",
+    ipAddress: "10.20.7.9",
+    manufacturer: "HID",
+    createdAt: "2026-06-08T17:55:00Z"
+  },
+  {
+    id: "demo-10",
+    name: "West wing alarm panel",
+    type: "ALARM_PANEL",
+    location: "West Wing",
+    status: "MAINTENANCE",
+    model: "Vista-250BPT",
+    macAddress: "00:1A:2B:3C:4D:E9",
+    ipAddress: "10.20.3.17",
+    manufacturer: "Honeywell",
+    createdAt: "2026-06-09T08:35:00Z"
+  }
+];

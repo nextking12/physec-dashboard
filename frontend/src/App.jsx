@@ -2,15 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
-  Camera,
-  CheckCircle2,
   ClipboardList,
-  CreditCard,
   Edit3,
   Filter,
   LogOut,
   Plus,
-  Radar,
   RefreshCw,
   Save,
   Shield,
@@ -19,280 +15,25 @@ import {
 } from "lucide-react";
 import { Analytics } from "@vercel/analytics/react";
 
-const DEVICE_TYPES = ["CAMERA", "CARD_READER", "ALARM_PANEL", "MOTION_SENSOR"];
-const DEVICE_STATUSES = ["ONLINE", "OFFLINE", "MAINTENANCE", "ALERTING"];
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-const SESSION_STORAGE_KEY = "psd.session";
-
-const DEMO_DEVICES = [
-  {
-    id: "demo-1",
-    name: "Front entrance camera",
-    type: "CAMERA",
-    location: "Main Lobby",
-    status: "ONLINE",
-    model: "P3265-LV",
-    macAddress: "00:1A:2B:3C:4D:5E",
-    ipAddress: "10.20.1.12",
-    manufacturer: "Axis",
-    createdAt: "2026-06-01T14:25:00Z"
-  },
-  {
-    id: "demo-2",
-    name: "Rear door card reader",
-    type: "CARD_READER",
-    location: "Rear Entrance",
-    status: "OFFLINE",
-    model: "RPK40",
-    macAddress: "00:1A:2B:3C:4D:61",
-    ipAddress: "10.20.2.8",
-    manufacturer: "HID",
-    createdAt: "2026-06-02T16:40:00Z"
-  },
-  {
-    id: "demo-3",
-    name: "East wing alarm panel",
-    type: "ALARM_PANEL",
-    location: "East Wing",
-    status: "MAINTENANCE",
-    model: "Vista-128BPT",
-    macAddress: "00:1A:2B:3C:4D:72",
-    ipAddress: "10.20.3.4",
-    manufacturer: "Honeywell",
-    createdAt: "2026-06-03T19:05:00Z"
-  },
-  {
-    id: "demo-4",
-    name: "Lobby motion sensor",
-    type: "MOTION_SENSOR",
-    location: "Main Lobby",
-    status: "ONLINE",
-    model: "ISC-BPR2",
-    macAddress: "00:1A:2B:3C:4D:83",
-    ipAddress: "10.20.1.28",
-    manufacturer: "Bosch",
-    createdAt: "2026-06-05T11:30:00Z"
-  },
-  {
-    id: "demo-5",
-    name: "Server room camera",
-    type: "CAMERA",
-    location: "Server Room",
-    status: "ALERTING",
-    model: "Q3538-LVE",
-    macAddress: "00:1A:2B:3C:4D:94",
-    ipAddress: "10.20.4.15",
-    manufacturer: "Axis",
-    createdAt: "2026-06-06T21:15:00Z"
-  },
-  {
-    id: "demo-6",
-    name: "Loading dock camera",
-    type: "CAMERA",
-    location: "Loading Dock",
-    status: "ONLINE",
-    model: "M3116-LVE",
-    macAddress: "00:1A:2B:3C:4D:A5",
-    ipAddress: "10.20.5.21",
-    manufacturer: "Axis",
-    createdAt: "2026-06-07T09:20:00Z"
-  },
-  {
-    id: "demo-7",
-    name: "Executive suite reader",
-    type: "CARD_READER",
-    location: "Executive Suite",
-    status: "ONLINE",
-    model: "Signo 40",
-    macAddress: "00:1A:2B:3C:4D:B6",
-    ipAddress: "10.20.2.31",
-    manufacturer: "HID",
-    createdAt: "2026-06-07T10:45:00Z"
-  },
-  {
-    id: "demo-8",
-    name: "Warehouse motion sensor",
-    type: "MOTION_SENSOR",
-    location: "Warehouse Aisle 4",
-    status: "OFFLINE",
-    model: "Blue Line Gen2",
-    macAddress: "00:1A:2B:3C:4D:C7",
-    ipAddress: "10.20.6.18",
-    manufacturer: "Bosch",
-    createdAt: "2026-06-08T12:10:00Z"
-  },
-  {
-    id: "demo-9",
-    name: "Parking gate reader",
-    type: "CARD_READER",
-    location: "Parking Gate",
-    status: "ALERTING",
-    model: "iCLASS SE R90",
-    macAddress: "00:1A:2B:3C:4D:D8",
-    ipAddress: "10.20.7.9",
-    manufacturer: "HID",
-    createdAt: "2026-06-08T17:55:00Z"
-  },
-  {
-    id: "demo-10",
-    name: "West wing alarm panel",
-    type: "ALARM_PANEL",
-    location: "West Wing",
-    status: "MAINTENANCE",
-    model: "Vista-250BPT",
-    macAddress: "00:1A:2B:3C:4D:E9",
-    ipAddress: "10.20.3.17",
-    manufacturer: "Honeywell",
-    createdAt: "2026-06-09T08:35:00Z"
-  }
-];
-
-const DEMO_AUDIT_LOGS = [
-  {
-    id: "audit-demo-1",
-    username: "operator_demo",
-    action: "UPDATE",
-    entityType: "DEVICE",
-    entityId: "demo-2",
-    details: "name=Rear door card reader",
-    occurredAt: "2026-06-07T15:18:00Z"
-  },
-  {
-    id: "audit-demo-2",
-    username: "admin_demo",
-    action: "CREATE",
-    entityType: "DEVICE",
-    entityId: "demo-5",
-    details: "name=Server room camera",
-    occurredAt: "2026-06-06T21:15:00Z"
-  },
-  {
-    id: "audit-demo-3",
-    username: "operator_demo",
-    action: "UPDATE",
-    entityType: "DEVICE",
-    entityId: "demo-3",
-    details: "name=East wing alarm panel",
-    occurredAt: "2026-06-05T13:42:00Z"
-  },
-  {
-    id: "audit-demo-4",
-    username: "admin_demo",
-    action: "DELETE",
-    entityType: "DEVICE",
-    entityId: "demo-legacy-1",
-    details: "name=Retired loading dock camera",
-    occurredAt: "2026-06-04T18:07:00Z"
-  },
-  {
-    id: "audit-demo-5",
-    username: "operator_demo",
-    action: "CREATE",
-    entityType: "DEVICE",
-    entityId: "demo-6",
-    details: "name=Loading dock camera",
-    occurredAt: "2026-06-07T09:20:00Z"
-  },
-  {
-    id: "audit-demo-6",
-    username: "admin_demo",
-    action: "CREATE",
-    entityType: "DEVICE",
-    entityId: "demo-7",
-    details: "name=Executive suite reader",
-    occurredAt: "2026-06-07T10:45:00Z"
-  },
-  {
-    id: "audit-demo-7",
-    username: "operator_demo",
-    action: "UPDATE",
-    entityType: "DEVICE",
-    entityId: "demo-8",
-    details: "status=OFFLINE location=Warehouse Aisle 4",
-    occurredAt: "2026-06-08T12:24:00Z"
-  },
-  {
-    id: "audit-demo-8",
-    username: "admin_demo",
-    action: "UPDATE",
-    entityType: "DEVICE",
-    entityId: "demo-9",
-    details: "status=ALERTING name=Parking gate reader",
-    occurredAt: "2026-06-08T18:02:00Z"
-  },
-  {
-    id: "audit-demo-9",
-    username: "operator_demo",
-    action: "CREATE",
-    entityType: "DEVICE",
-    entityId: "demo-10",
-    details: "name=West wing alarm panel",
-    occurredAt: "2026-06-09T08:35:00Z"
-  },
-  {
-    id: "audit-demo-10",
-    username: "admin_demo",
-    action: "UPDATE",
-    entityType: "DEVICE",
-    entityId: "demo-1",
-    details: "firmware=validated network=10.20.1.12",
-    occurredAt: "2026-06-09T11:12:00Z"
-  }
-];
-
-const EMPTY_FORM = {
-  name: "",
-  type: "CAMERA",
-  location: "",
-  status: "ONLINE",
-  model: "",
-  macAddress: "",
-  ipAddress: "",
-  manufacturer: ""
-};
-
-const statusLabels = {
-  ONLINE: "Online",
-  OFFLINE: "Offline",
-  MAINTENANCE: "Maintenance",
-  ALERTING: "Alerting"
-};
-
-const typeLabels = {
-  CAMERA: "Camera",
-  CARD_READER: "Card Reader",
-  ALARM_PANEL: "Alarm Panel",
-  MOTION_SENSOR: "Motion Sensor"
-};
-
-const roleLabels = {
-  ADMIN: "Admin",
-  OPERATOR: "Operator",
-  VIEWER: "Viewer"
-};
-
-const auditActionLabels = {
-  CREATE: "Created",
-  UPDATE: "Updated",
-  DELETE: "Deleted"
-};
-
-function apiUrl(path) {
-  return `${API_BASE_URL}${path}`;
-}
-
-function toTitle(value) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function formatTimestamp(value) {
-  if (!value) return "Unknown time";
-  return new Date(value).toLocaleString();
-}
+import {
+  DEVICE_TYPES,
+  DEVICE_STATUSES,
+  EMPTY_FORM,
+  statusLabels,
+  typeLabels,
+  roleLabels,
+  auditActionLabels,
+  API_BASE_URL,
+  SESSION_STORAGE_KEY
+} from "./data/constants";
+import { DEMO_DEVICES } from "./data/demoDevices";
+import { DEMO_AUDIT_LOGS } from "./data/demoAuditLogs";
+import { apiUrl } from "./utils/api";
+import { filterDevices, filterAuditLogs } from "./utils/filters";
+import { toTitle, formatTimestamp } from "./utils/format";
+import MetricCard from "./components/MetricCard";
+import DetailItem from "./components/DetailItem";
+import TypeIcon from "./components/TypeIcon";
 
 export default function App() {
   const [session, setSession] = useState(() => {
@@ -307,7 +48,6 @@ export default function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activeTab, setActiveTab] = useState("devices");
   const [devices, setDevices] = useState([]);
-  const [allDevices, setAllDevices] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [filters, setFilters] = useState({ status: "", type: "", location: "" });
   const [auditFilters, setAuditFilters] = useState({ action: "", entityType: "" });
@@ -329,17 +69,9 @@ export default function App() {
   const isAdmin = session?.role === "ADMIN" || isDemo;
 
   const metricBaseDevices = useMemo(() => {
-    const source = isDemo ? DEMO_DEVICES : allDevices;
-    const locationFilter = filters.location.trim().toLowerCase();
-
-    return source.filter((device) => {
-      const matchesType = !filters.type || device.type === filters.type;
-      const matchesLocation =
-        !locationFilter || device.location.toLowerCase().includes(locationFilter);
-
-      return matchesType && matchesLocation;
-    });
-  }, [isDemo, allDevices, filters.type, filters.location]);
+    const source = isDemo ? DEMO_DEVICES : devices;
+    return filterDevices(source, { ...filters, status: "" });
+  }, [isDemo, devices, filters]);
 
   const metrics = useMemo(() => {
     return DEVICE_STATUSES.map((status) => ({
@@ -352,7 +84,7 @@ export default function App() {
   function handleMetricClick(status) {
     setFilters((current) => ({
       ...current,
-      status: status === "" ? "" : current.status === status ? "" : status
+      status: current.status === status ? "" : status
     }));
   }
 
@@ -395,7 +127,6 @@ export default function App() {
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
     setSession(null);
     setDevices([]);
-    setAllDevices([]);
     setAuditLogs([]);
     setActiveTab("devices");
   }
@@ -436,6 +167,7 @@ export default function App() {
     }
 
     restoreSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadDevices() {
@@ -446,17 +178,7 @@ export default function App() {
 
     try {
       if (isDemo) {
-        const locationFilter = filters.location.trim().toLowerCase();
-        const demoData = DEMO_DEVICES.filter((device) => {
-          const matchesStatus = !filters.status || device.status === filters.status;
-          const matchesType = !filters.type || device.type === filters.type;
-          const matchesLocation =
-            !locationFilter || device.location.toLowerCase().includes(locationFilter);
-
-          return matchesStatus && matchesType && matchesLocation;
-        });
-
-        setDevices(demoData);
+        setDevices(filterDevices(DEMO_DEVICES, filters));
         return;
       }
 
@@ -468,9 +190,6 @@ export default function App() {
       const query = params.toString();
       const data = await apiRequest(`/api/devices${query ? `?${query}` : ""}`);
       setDevices(data);
-      if (!filters.status) {
-        setAllDevices(data);
-      }
     } catch (err) {
       setError(err.message);
       if (err.message.includes("Session expired")) {
@@ -489,16 +208,7 @@ export default function App() {
 
     try {
       if (isDemo) {
-        const entityTypeFilter = auditFilters.entityType.trim().toLowerCase();
-        const demoData = DEMO_AUDIT_LOGS.filter((entry) => {
-          const matchesAction = !auditFilters.action || entry.action === auditFilters.action;
-          const matchesEntityType =
-            !entityTypeFilter || entry.entityType.toLowerCase().includes(entityTypeFilter);
-
-          return matchesAction && matchesEntityType;
-        });
-
-        setAuditLogs(demoData);
+        setAuditLogs(filterAuditLogs(DEMO_AUDIT_LOGS, auditFilters));
         return;
       }
 
@@ -527,7 +237,8 @@ export default function App() {
     } else if (activeTab === "audit") {
       loadAuditLogs();
     }
-  }, [session, isRestoringSession, activeTab, filters.status, filters.type]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, isRestoringSession, activeTab, filters.status, filters.type, filters.location]);
 
   function startDemo() {
     setLoginError("");
@@ -911,7 +622,7 @@ export default function App() {
                     >
                       <td>
                         <div className="name-cell">
-                          {typeIcon(device.type)}
+                          <TypeIcon type={device.type} />
                           <div>
                             <strong>{device.name}</strong>
                             <span>{device.model || "No model recorded"}</span>
@@ -1163,53 +874,4 @@ export default function App() {
       <Analytics />
     </main>
   );
-}
-
-function DetailItem({ label, value }) {
-  return (
-    <div className="detail-item">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function MetricCard({ icon, label, value, status, active, onClick, title }) {
-  return (
-    <article
-      className={`metric-card${onClick ? " clickable" : ""}${active ? " active" : ""}`}
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      aria-pressed={onClick ? active : undefined}
-      title={title}
-      onClick={onClick}
-      onKeyDown={
-        onClick
-          ? (event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onClick();
-              }
-            }
-          : undefined
-      }
-    >
-      <div className={`metric-icon ${status ? status.toLowerCase() : ""}`}>
-        {icon || <CheckCircle2 size={20} />}
-      </div>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
-  );
-}
-
-function typeIcon(type) {
-  const icons = {
-    CAMERA: <Camera size={18} />,
-    CARD_READER: <CreditCard size={18} />,
-    ALARM_PANEL: <Shield size={18} />,
-    MOTION_SENSOR: <Radar size={18} />
-  };
-  const typeClass = type ? type.toLowerCase().replaceAll("_", "-") : "";
-  return <span className={`type-icon ${typeClass}`}>{icons[type] || <Shield size={18} />}</span>;
 }

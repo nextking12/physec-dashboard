@@ -2,9 +2,13 @@ package com.nextking12.physical_security_dashboard.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,5 +28,13 @@ public class GlobalExceptionHandler {
 	@ResponseStatus(HttpStatus.FORBIDDEN)
 	public String handleAccessDenied(AccessDeniedException ex) {
 		return "Access denied";
+	}
+
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	public String handleValidation(MethodArgumentNotValidException ex) {
+		return ex.getBindingResult().getFieldErrors().stream()
+				.map(FieldError::getDefaultMessage)
+				.collect(Collectors.joining("; "));
 	}
 }

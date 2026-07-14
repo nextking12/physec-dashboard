@@ -28,7 +28,7 @@ public class DeviceService {
 
     public List<DeviceResponse> findAll(DeviceStatus status, DeviceType type, String location) {
         Specification<Device> spec = (root, query, criteriaBuilder) -> {
-            List<   Predicate> predicates = new ArrayList<>();
+            List<Predicate> predicates = new ArrayList<>();
 
             if (status != null) {
                 predicates.add(criteriaBuilder.equal(root.get("status"), status));
