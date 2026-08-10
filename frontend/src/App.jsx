@@ -23,7 +23,6 @@ import {
   typeLabels,
   roleLabels,
   auditActionLabels,
-  API_BASE_URL,
   SESSION_STORAGE_KEY
 } from "./data/constants";
 import { DEMO_DEVICES } from "./data/demoDevices";
@@ -167,7 +166,6 @@ export default function App() {
     }
 
     restoreSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadDevices() {
@@ -237,7 +235,6 @@ export default function App() {
     } else if (activeTab === "audit") {
       loadAuditLogs();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, isRestoringSession, activeTab, filters.status, filters.type, filters.location]);
 
   function startDemo() {
@@ -571,7 +568,7 @@ export default function App() {
                 ))}
               </select>
             </label>
-            <label className="location-filter">
+            <label>
               Location Filter
               <input
                 value={filters.location}

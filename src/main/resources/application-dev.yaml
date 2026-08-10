@@ -1,8 +1,4 @@
 spring:
-  security:
-    user:
-      name: ${APP_USERNAME:admin}
-      password: ${APP_PASSWORD:dev-password}
   flyway:
     locations: classpath:db/migration,classpath:db/dev-migration
   datasource:

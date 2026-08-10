@@ -12,6 +12,5 @@ target/
 !.env.example
 frontend/
 README.md
-HELP.md
 compose.yaml
 .DS_Store
